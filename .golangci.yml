@@ -1,0 +1,55 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - revive
+  settings:
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: early-return
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unnecessary-stmt
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: dot-imports
+          disabled: true
+    errcheck:
+      check-blank: true
+      exclude-functions:
+        - (*github.com/spf13/pflag.FlagSet).MarkHidden
+        - (*os.File).Close
+        - (io.Closer).Close
+        - fmt.Fprintf
+        - fmt.Fprintln
+  exclusions:
+    rules:
+      - path: '(.+)_test\.go'
+        linters:
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+run:
+  timeout: 2m

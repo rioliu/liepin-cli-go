@@ -18,6 +18,9 @@ test-e2e:
 test-e2e-verbose:
 	go test -tags=e2e ./test/e2e/ -v -count=1
 
+lint:
+	golangci-lint run ./...
+
 clean:
 	rm -rf $(BUILD_DIR)
 

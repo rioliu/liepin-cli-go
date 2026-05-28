@@ -3,11 +3,16 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 func Render(data any, mode string) {
 	if mode == "json" {
-		jsonData, _ := json.MarshalIndent(data, "", "  ")
+		jsonData, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+			return
+		}
 		fmt.Println(string(jsonData))
 		return
 	}
@@ -22,7 +27,11 @@ func Render(data any, mode string) {
 	case string:
 		fmt.Println(v)
 	default:
-		jsonData, _ := json.MarshalIndent(v, "", "  ")
+		jsonData, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to marshal JSON: %v\n", err)
+			return
+		}
 		fmt.Println(string(jsonData))
 	}
 }

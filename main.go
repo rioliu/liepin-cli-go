@@ -1,7 +1,15 @@
 package main
 
-import "github.com/rioliu/liepin-cli-go/cmd"
+import (
+	"fmt"
+	"os"
+
+	"github.com/rioliu/liepin-cli-go/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

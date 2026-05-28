@@ -61,12 +61,11 @@ func ResolveConfig(tokenFlag, baseURLFlag, outputFlag string, timeoutFlag float6
 			if err != nil {
 				return nil, fmt.Errorf("failed to read config file: %w", err)
 			}
-			if stored != "" {
-				resolvedToken = stored
-				source = "config"
-			} else {
+			if stored == "" {
 				return nil, &MissingTokenError{}
 			}
+			resolvedToken = stored
+			source = "config"
 		}
 	}
 

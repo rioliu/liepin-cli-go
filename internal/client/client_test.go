@@ -50,7 +50,7 @@ var _ = Describe("Client GET", func() {
 	})
 
 	It("returns AuthorizationError for 401", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 		}))
 		defer srv.Close()
@@ -63,7 +63,7 @@ var _ = Describe("Client GET", func() {
 	})
 
 	It("returns RequestError for 500", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer srv.Close()
@@ -76,7 +76,7 @@ var _ = Describe("Client GET", func() {
 	})
 
 	It("returns error for invalid JSON response", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte("not-json"))
 		}))
@@ -88,7 +88,7 @@ var _ = Describe("Client GET", func() {
 	})
 
 	It("returns plain text as string", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.Write([]byte("hello"))
 		}))
@@ -101,7 +101,7 @@ var _ = Describe("Client GET", func() {
 	})
 
 	It("returns nil for empty response", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer srv.Close()
@@ -138,7 +138,7 @@ var _ = Describe("Client POST", func() {
 	})
 
 	It("returns AuthorizationError for 403", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusForbidden)
 		}))
 		defer srv.Close()

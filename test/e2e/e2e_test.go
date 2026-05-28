@@ -40,7 +40,8 @@ var _ = Describe("E2E: read-only endpoints", func() {
 
 		m, ok := data.(map[string]any)
 		Expect(ok).To(BeTrue(), "response should be a JSON object")
-		Expect(m).To(HaveKey("resumeId"))
+		Expect(m).To(HaveKey("errCode"))
+		Expect(m).To(HaveKey("data"))
 	})
 
 	It("POST /mcp/search-job returns search results", func() {

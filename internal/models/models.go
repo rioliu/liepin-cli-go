@@ -39,7 +39,7 @@ func validateRequired(field, value string, errors *[]ValidationError) {
 	}
 }
 
-func validateRequiredInt(field string, value int, isSet bool, errors *[]ValidationError) {
+func validateRequiredInt(field string, _ int, isSet bool, errors *[]ValidationError) {
 	if !isSet {
 		*errors = append(*errors, ValidationError{field, "is required"})
 	}
@@ -77,20 +77,6 @@ func StrPtr(s string) *string {
 		return nil
 	}
 	return &s
-}
-
-func intPtr(i int, isSet bool) *int {
-	if !isSet {
-		return nil
-	}
-	return &i
-}
-
-func boolPtr(b bool, isSet bool) *bool {
-	if !isSet {
-		return nil
-	}
-	return &b
 }
 
 // SafeString gets string from pointer or empty.

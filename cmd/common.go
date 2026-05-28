@@ -6,18 +6,17 @@ import (
 
 	"github.com/rioliu/liepin-cli-go/internal/client"
 	"github.com/rioliu/liepin-cli-go/internal/config"
-	"github.com/rioliu/liepin-cli-go/internal/models"
 	"github.com/rioliu/liepin-cli-go/internal/output"
 	"github.com/rioliu/liepin-cli-go/internal/payload"
 	"github.com/spf13/cobra"
 )
 
 var (
-	tokenFlag    string
-	baseURLFlag  string
-	timeoutFlag  float64
-	outputFlag   string
-	inputFlag    string
+	tokenFlag   string
+	baseURLFlag string
+	timeoutFlag float64
+	outputFlag  string
+	inputFlag   string
 )
 
 func buildClient() (*client.Client, *config.RuntimeConfig, error) {
@@ -106,26 +105,6 @@ func buildPayload(overrides map[string]any, validate func() error) (map[string]a
 	}
 
 	return merged, nil
-}
-
-func setIfNotEmpty(m map[string]any, key, value string) {
-	if value != "" {
-		m[key] = value
-	}
-}
-
-func setIntIfNotEmpty(m map[string]any, key, raw string) error {
-	if raw == "" {
-		return nil
-	}
-	v, err := models.ParseOptionalInt(raw)
-	if err != nil {
-		return err
-	}
-	if v != nil {
-		m[key] = *v
-	}
-	return nil
 }
 
 func optionalIntValue(v *int) int {

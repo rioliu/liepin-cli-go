@@ -18,7 +18,7 @@ var authCmd = &cobra.Command{
 var authStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show current login status.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		token, err := authstore.LoadToken()
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
@@ -35,7 +35,7 @@ var authStatusCmd = &cobra.Command{
 var authClearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Clear current auth info.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		cleared, err := authstore.ClearToken()
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
@@ -52,7 +52,7 @@ var authClearCmd = &cobra.Command{
 var authOpenCmd = &cobra.Command{
 	Use:   "open",
 	Short: "Open the auth page.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		if err := browser.OpenAuthPage(); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
 			return

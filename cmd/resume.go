@@ -16,7 +16,7 @@ var resumeCmd = &cobra.Command{
 var resumeGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get current resume.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		executeGet("/mcp/get-resume")
 	},
 }
@@ -34,7 +34,7 @@ var (
 var resumeUpdateBaseInfoCmd = &cobra.Command{
 	Use:   "update-base-info",
 	Short: "Update base info.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if realName != "" {
 			overrides["realName"] = realName
@@ -134,7 +134,7 @@ var selfAssess string
 var resumeUpdateSelfAssessCmd = &cobra.Command{
 	Use:   "update-self-assess",
 	Short: "Update self assessment.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if selfAssess != "" {
 			overrides["selfAssess"] = selfAssess
@@ -162,7 +162,7 @@ var (
 var resumeAddEduExpCmd = &cobra.Command{
 	Use:   "add-edu-exp",
 	Short: "Add education experience.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if eduSchool != "" {
 			overrides["school"] = eduSchool
@@ -212,7 +212,7 @@ var eduID string
 var resumeUpdateEduExpCmd = &cobra.Command{
 	Use:   "update-edu-exp",
 	Short: "Update education experience.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		idVal, err := models.ParseOptionalInt(eduID)
 		if err != nil {
@@ -268,16 +268,16 @@ var resumeUpdateEduExpCmd = &cobra.Command{
 
 var (
 	workCompName, workIndustry, workStart, workEnd, workRwTitle, workJobtitle string
-	workDq, workDept, workReport, workDuty, workCompkind, workCompscale        string
-	workLabels                                                                 string
-	workSubordinate, workMonthsStr, workSalaryStr, workTypeStr                 string
-	shieldComp                                                                 bool
+	workDq, workDept, workReport, workDuty, workCompkind, workCompscale       string
+	workLabels                                                                string
+	workSubordinate, workMonthsStr, workSalaryStr, workTypeStr                string
+	shieldComp                                                                bool
 )
 
 var resumeAddWorkExpCmd = &cobra.Command{
 	Use:   "add-work-exp",
 	Short: "Add work experience.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if workCompName != "" {
 			overrides["compName"] = workCompName
@@ -392,7 +392,7 @@ var workID string
 var resumeUpdateWorkExpCmd = &cobra.Command{
 	Use:   "update-work-exp",
 	Short: "Update work experience.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		idVal, err := models.ParseOptionalInt(workID)
 		if err != nil {
@@ -479,25 +479,25 @@ var resumeUpdateWorkExpCmd = &cobra.Command{
 		}
 
 		m := models.UpdateWorkExpInput{
-			WorkID:     optionalIntValue(idVal),
-			CompName:   models.StrPtr(workCompName),
-			Industry:   models.StrPtr(workIndustry),
-			WorkStart:  models.StrPtr(workStart),
-			WorkEnd:    models.StrPtr(workEnd),
-			RwTitle:    models.StrPtr(workRwTitle),
-			Jobtitle:   models.StrPtr(workJobtitle),
-			Dq:         models.StrPtr(workDq),
-			Dept:       models.StrPtr(workDept),
-			Report:     models.StrPtr(workReport),
-			Duty:       models.StrPtr(workDuty),
+			WorkID:      optionalIntValue(idVal),
+			CompName:    models.StrPtr(workCompName),
+			Industry:    models.StrPtr(workIndustry),
+			WorkStart:   models.StrPtr(workStart),
+			WorkEnd:     models.StrPtr(workEnd),
+			RwTitle:     models.StrPtr(workRwTitle),
+			Jobtitle:    models.StrPtr(workJobtitle),
+			Dq:          models.StrPtr(workDq),
+			Dept:        models.StrPtr(workDept),
+			Report:      models.StrPtr(workReport),
+			Duty:        models.StrPtr(workDuty),
 			Subordinate: sub,
-			Months:     months,
-			Salary:     salary,
-			Compkind:   models.StrPtr(workCompkind),
-			Compscale:  models.StrPtr(workCompscale),
-			Labels:     models.StrPtr(workLabels),
-			WorkType:   wt,
-			ShieldComp: models.ParseOptionalBool(cmd.Flags().Changed("shield-comp"), shieldComp),
+			Months:      months,
+			Salary:      salary,
+			Compkind:    models.StrPtr(workCompkind),
+			Compscale:   models.StrPtr(workCompscale),
+			Labels:      models.StrPtr(workLabels),
+			WorkType:    wt,
+			ShieldComp:  models.ParseOptionalBool(cmd.Flags().Changed("shield-comp"), shieldComp),
 		}
 
 		payload, err := buildPayload(overrides, m.Validate)
@@ -513,13 +513,13 @@ var resumeUpdateWorkExpCmd = &cobra.Command{
 
 var (
 	projName, projStart, projEnd, projCompName, projPosition string
-	projDescr, projDuty, projAchievement                      string
+	projDescr, projDuty, projAchievement                     string
 )
 
 var resumeAddProjectExpCmd = &cobra.Command{
 	Use:   "add-project-exp",
 	Short: "Add project experience.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if projName != "" {
 			overrides["name"] = projName
@@ -573,7 +573,7 @@ var projID string
 var resumeUpdateProjectExpCmd = &cobra.Command{
 	Use:   "update-project-exp",
 	Short: "Update project experience.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		idVal, err := models.ParseOptionalInt(projID)
 		if err != nil {
@@ -632,16 +632,16 @@ var resumeUpdateProjectExpCmd = &cobra.Command{
 // --- add-job-want ---
 
 var (
-	wantJobtitle, wantDq, wantWorkType                                      string
-	wantIndustries, wantOtherExpectDqs                                      []string
+	wantJobtitle, wantDq, wantWorkType                                        string
+	wantIndustries, wantOtherExpectDqs                                        []string
 	wantSalaryLowStr, wantSalaryHighStr, wantSalaryMonthsStr, wantWorkweekStr string
-	wantPracticeMonthsStr                                                    string
+	wantPracticeMonthsStr                                                     string
 )
 
 var resumeAddJobWantCmd = &cobra.Command{
 	Use:   "add-job-want",
 	Short: "Add job preference.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if wantJobtitle != "" {
 			overrides["jobtitle"] = wantJobtitle
@@ -729,7 +729,7 @@ var wantID string
 var resumeUpdateJobWantCmd = &cobra.Command{
 	Use:   "update-job-want",
 	Short: "Update job preference.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		idVal, err := models.ParseOptionalInt(wantID)
 		if err != nil {

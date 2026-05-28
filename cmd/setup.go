@@ -13,7 +13,7 @@ var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "First-time config or refresh login state.",
 	Long:  "Interactive auth flow: open browser → paste token → verify and save to local config.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		verifyToken := func(token string) error {
 			cfg, err := config.ResolveConfig(token, config.DefaultBaseURL, "pretty", 30.0)
 			if err != nil {

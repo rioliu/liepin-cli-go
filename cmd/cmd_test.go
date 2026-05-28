@@ -69,13 +69,6 @@ func captureStdout(fn func()) string {
 	return buf.String()
 }
 
-func jsonOK() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"ok": true})
-	}
-}
-
 func decodeBody(r *http.Request) map[string]any {
 	var body map[string]any
 	json.NewDecoder(r.Body).Decode(&body)
@@ -650,7 +643,7 @@ var _ = Describe("Output format", func() {
 	})
 
 	It("renders valid JSON in json mode", func() {
-		startMockServer(func(w http.ResponseWriter, r *http.Request) {
+		startMockServer(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]any{"resumeId": float64(1)})
 		})
@@ -665,7 +658,7 @@ var _ = Describe("Output format", func() {
 	})
 
 	It("renders plain text as-is in pretty mode", func() {
-		startMockServer(func(w http.ResponseWriter, r *http.Request) {
+		startMockServer(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.Write([]byte("hello world"))
 		})

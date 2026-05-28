@@ -15,15 +15,15 @@ var jobCmd = &cobra.Command{
 
 var (
 	searchWorkExperience, searchEduLevel, searchCompNature, searchAddress string
-	searchSalaryFloor, searchSalaryCap, searchSalaryKind                   string
-	searchJobName, searchCompanyName                                       string
-	searchPage                                                             string
+	searchSalaryFloor, searchSalaryCap, searchSalaryKind                  string
+	searchJobName, searchCompanyName                                      string
+	searchPage                                                            string
 )
 
 var jobSearchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Search jobs.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		if searchWorkExperience != "" {
 			overrides["workExperience"] = searchWorkExperience
@@ -94,7 +94,7 @@ var jobApplyCmd = &cobra.Command{
 	Use:   "apply",
 	Short: "Apply for a job.",
 	Long:  "Apply for a job. --job-id and --job-kind are both required. Use the type value from search results for --job-kind.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		overrides := map[string]any{}
 		idVal, err := models.ParseOptionalInt(applyJobID)
 		if err != nil {
