@@ -114,11 +114,12 @@ make test-e2e
 
 ## Claude Code Integration
 
-This repo includes a Claude Code skill (`.claude/skills/liepin-cli/`) that teaches Claude how to use `liepin-cli`. When you open this repo in Claude Code, the skill is loaded automatically — Claude will prefer running CLI commands over ad-hoc HTTP requests for Liepin operations.
-
-If you want the skill available outside this repo, copy it to your global skills:
+The upstream [liepin-cli](https://github.com/rioliu/liepin-cli) repo includes a Claude Code skill that teaches Claude how to use `liepin-cli`. To install it globally so Claude can use the CLI from any project:
 
 ```bash
-cp -r .claude/skills/liepin-cli ~/.claude/skills/
+git clone https://github.com/rioliu/liepin-cli.git /tmp/liepin-cli
+cp -r /tmp/liepin-cli/.claude/skills/liepin-cli ~/.claude/skills/
 ```
+
+Once installed, Claude will prefer running `liepin-cli` commands over ad-hoc HTTP requests for Liepin operations.
 
