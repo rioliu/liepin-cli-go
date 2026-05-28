@@ -12,15 +12,12 @@ A CLI tool for [Liepin](https://www.liepin.com) resume management and job applic
 ```bash
 git clone https://github.com/rioliu/liepin-cli-go.git
 cd liepin-cli-go
-make install
+make build
+export PATH="$PWD/bin:$PATH"
 liepin-cli setup
 ```
 
-`make install` copies the binary to `~/.local/bin`. Ensure that directory is in your `PATH`:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc
-```
+Add the `export PATH` line to `~/.zshrc` or `~/.bashrc` to make it permanent.
 
 `setup` opens your browser to the Liepin auth page. Paste your token when prompted — it's verified against the API and saved to `~/.config/liepin-cli/config.json`.
 
@@ -93,7 +90,7 @@ liepin-cli job apply --job-id 123456 --job-kind 1
 
 ```bash
 make build           # Build binary → bin/liepin-cli
-make install         # Build and copy to ~/.local/bin
+make install         # Build and copy to ~/.local/bin (optional, or just add ./bin to PATH)
 make test            # Run all unit tests
 make test-verbose    # Run unit tests with verbose output
 make test-e2e        # Run e2e tests against the real API
