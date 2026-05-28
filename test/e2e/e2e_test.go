@@ -12,25 +12,28 @@ import (
 	"github.com/rioliu/liepin-cli-go/internal/config"
 )
 
+func newE2EClient() (*client.Client, bool) {
+	baseURL := os.Getenv("LIEPIN_BASE_URL")
+	cfg, err := config.ResolveConfig("", baseURL, "pretty", 30.0)
+	if err != nil {
+		return nil, false
+	}
+	return client.New(client.Config{
+		Token:   cfg.Token,
+		BaseURL: cfg.BaseURL,
+		Timeout: cfg.Timeout,
+	}), config.IsProduction(cfg.BaseURL)
+}
+
 var _ = Describe("E2E: read-only endpoints", func() {
 	var c *client.Client
 
 	BeforeEach(func() {
-		token := os.Getenv("LIEPIN_USER_TOKEN")
-		if token == "" {
-			Skip("LIEPIN_USER_TOKEN not set")
+		var ok bool
+		c, ok = newE2EClient()
+		if !ok {
+			Skip("no token available — set LIEPIN_USER_TOKEN or run setup")
 		}
-
-		baseURL := os.Getenv("LIEPIN_BASE_URL")
-
-		cfg, err := config.ResolveConfig(token, baseURL, "pretty", 30.0)
-		Expect(err).NotTo(HaveOccurred())
-
-		c = client.New(client.Config{
-			Token:   cfg.Token,
-			BaseURL: cfg.BaseURL,
-			Timeout: cfg.Timeout,
-		})
 	})
 
 	It("GET /mcp/get-resume returns resume data", func() {
@@ -65,23 +68,11 @@ var _ = Describe("E2E: write endpoints", func() {
 	var isProd bool
 
 	BeforeEach(func() {
-		token := os.Getenv("LIEPIN_USER_TOKEN")
-		if token == "" {
-			Skip("LIEPIN_USER_TOKEN not set")
+		var ok bool
+		c, isProd = newE2EClient()
+		if !ok {
+			Skip("no token available — set LIEPIN_USER_TOKEN or run setup")
 		}
-
-		baseURL := os.Getenv("LIEPIN_BASE_URL")
-
-		cfg, err := config.ResolveConfig(token, baseURL, "pretty", 30.0)
-		Expect(err).NotTo(HaveOccurred())
-
-		isProd = config.IsProduction(cfg.BaseURL)
-
-		c = client.New(client.Config{
-			Token:   cfg.Token,
-			BaseURL: cfg.BaseURL,
-			Timeout: cfg.Timeout,
-		})
 	})
 
 	expectJSONObject := func(data any) map[string]any {
