@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	tokenFlag   string
-	baseURLFlag string
-	timeoutFlag float64
-	outputFlag  string
-	inputFlag   string
+	tokenFlag    string
+	baseURLFlag  string
+	timeoutFlag  float64
+	outputFlag   string
+	inputFlag    string
+	insecureFlag bool
 )
 
 func buildClient() (*client.Client, *config.RuntimeConfig, error) {
@@ -25,9 +26,10 @@ func buildClient() (*client.Client, *config.RuntimeConfig, error) {
 		return nil, nil, err
 	}
 	return client.New(client.Config{
-		Token:   cfg.Token,
-		BaseURL: cfg.BaseURL,
-		Timeout: cfg.Timeout,
+		Token:              cfg.Token,
+		BaseURL:            cfg.BaseURL,
+		Timeout:            cfg.Timeout,
+		InsecureSkipVerify: insecureFlag,
 	}), cfg, nil
 }
 
@@ -54,6 +56,9 @@ func handleError(err error) {
 		fmt.Fprintln(os.Stderr, "No token found. Please run the setup flow first.")
 		exitWithError(e, false)
 	case *config.InvalidInputError:
+		exitWithError(e, false)
+	case *client.TLSError:
+		fmt.Fprintln(os.Stderr, "TLS verification failed. This can happen when an HTTP proxy intercepts traffic.\n  Rerun with --insecure (-k) to skip certificate verification.")
 		exitWithError(e, false)
 	default:
 		exitWithError(e, false)
@@ -120,6 +125,7 @@ func addCommonFlags(cmd *cobra.Command) {
 	cmd.Flags().Float64Var(&timeoutFlag, "timeout", 0, "Request timeout in seconds")
 	cmd.Flags().StringVarP(&outputFlag, "output", "o", "", "Output format (pretty/json)")
 	cmd.Flags().StringVar(&inputFlag, "input", "", "JSON request body file path")
+	cmd.Flags().BoolVarP(&insecureFlag, "insecure", "k", false, "Skip TLS certificate verification")
 
 	// Hide advanced flags
 	cmd.Flags().MarkHidden("token")

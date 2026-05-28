@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,9 +13,10 @@ import (
 )
 
 type Config struct {
-	Token   string
-	BaseURL string
-	Timeout time.Duration
+	Token              string
+	BaseURL            string
+	Timeout            time.Duration
+	InsecureSkipVerify bool
 }
 
 type Client struct {
@@ -22,11 +24,26 @@ type Client struct {
 	httpClient *http.Client
 }
 
+type TLSError struct {
+	Err error
+}
+
+func (e *TLSError) Error() string {
+	return e.Err.Error()
+}
+
 func New(config Config) *Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if config.InsecureSkipVerify {
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
 	return &Client{
 		config: config,
 		httpClient: &http.Client{
-			Timeout: config.Timeout,
+			Timeout:   config.Timeout,
+			Transport: transport,
 		},
 	}
 }
@@ -102,6 +119,9 @@ func (c *Client) Post(path string, payload any) (any, error) {
 func (c *Client) doRequest(req *http.Request) (any, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		if isTLSError(err) {
+			return nil, &TLSError{Err: err}
+		}
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
@@ -132,4 +152,14 @@ func (c *Client) doRequest(req *http.Request) (any, error) {
 		return nil, nil
 	}
 	return bodyStr, nil
+}
+
+func isTLSError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "tls:") ||
+		strings.Contains(errStr, "x509:") ||
+		strings.Contains(errStr, "certificate")
 }
