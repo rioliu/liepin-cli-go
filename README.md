@@ -12,8 +12,8 @@ A CLI tool for [Liepin](https://www.liepin.com) resume management and job applic
 ```bash
 git clone https://github.com/rioliu/liepin-cli-go.git
 cd liepin-cli-go
-make build
-./bin/liepin-cli setup
+make install
+liepin-cli setup
 ```
 
 `setup` opens your browser to the Liepin auth page. Paste your token when prompted — it's verified against the API and saved to `~/.config/liepin-cli/config.json`.
