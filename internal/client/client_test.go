@@ -16,7 +16,7 @@ func newClient(srv *httptest.Server) *client.Client {
 }
 
 func jsonOK(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 }
 
@@ -24,7 +24,7 @@ var _ = Describe("Client GET", func() {
 	It("sends auth header", func() {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer GinkgoRecover()
-			Expect(r.Header.Get("x-user-token")).To(Equal("token-123"))
+			Expect(r.Header.Get(client.HeaderXUserToken)).To(Equal("token-123"))
 			Expect(r.Method).To(Equal(http.MethodGet))
 			jsonOK(w)
 		}))
@@ -77,7 +77,7 @@ var _ = Describe("Client GET", func() {
 
 	It("returns error for invalid JSON response", func() {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			w.Write([]byte("not-json"))
 		}))
 		defer srv.Close()
@@ -89,7 +89,7 @@ var _ = Describe("Client GET", func() {
 
 	It("returns plain text as string", func() {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set(client.HeaderContentType, "text/plain")
 			w.Write([]byte("hello"))
 		}))
 		defer srv.Close()
@@ -123,9 +123,9 @@ var _ = Describe("Client POST", func() {
 	It("sends JSON payload with auth header", func() {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer GinkgoRecover()
-			Expect(r.Header.Get("x-user-token")).To(Equal("token-123"))
+			Expect(r.Header.Get(client.HeaderXUserToken)).To(Equal("token-123"))
 			Expect(r.Method).To(Equal(http.MethodPost))
-			Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
+			Expect(r.Header.Get(client.HeaderContentType)).To(Equal(client.MediaTypeJSON))
 			jsonOK(w)
 		}))
 		defer srv.Close()

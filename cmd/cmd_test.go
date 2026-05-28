@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/rioliu/liepin-cli-go/internal/authstore"
+	"github.com/rioliu/liepin-cli-go/internal/client"
 )
 
 // ─── helpers ────────────────────────────────────────────────────────
@@ -182,14 +183,14 @@ var _ = Describe("Job search", func() {
 		startMockServer(func(w http.ResponseWriter, r *http.Request) {
 			Expect(r.Method).To(Equal(http.MethodPost))
 			Expect(r.URL.Path).To(Equal("/mcp/search-job"))
-			Expect(r.Header.Get("x-user-token")).To(Equal("test-token"))
+			Expect(r.Header.Get(client.HeaderXUserToken)).To(Equal("test-token"))
 
 			body := decodeBody(r)
 			Expect(body["jobName"]).To(Equal("Go Engineer"))
 			Expect(body["address"]).To(Equal("Beijing"))
 			Expect(body["page"]).To(Equal(float64(0)))
 
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -209,7 +210,7 @@ var _ = Describe("Job search", func() {
 			Expect(body["salaryFloor"]).To(Equal("10000"))
 			Expect(body["salaryCap"]).To(Equal("30000"))
 			Expect(body["salaryKind"]).To(Equal("1"))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -226,7 +227,7 @@ var _ = Describe("Job search", func() {
 			for _, key := range []string{"workExperience", "eduLevel", "compNature", "address", "jobName", "companyName"} {
 				Expect(body).NotTo(HaveKey(key))
 			}
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -249,7 +250,7 @@ var _ = Describe("Job apply", func() {
 			Expect(body["jobId"]).To(Equal(float64(42)))
 			Expect(body["jobKind"]).To(Equal("1"))
 
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"applied": true})
 		})
 
@@ -275,7 +276,7 @@ var _ = Describe("Resume get", func() {
 			Expect(r.Method).To(Equal(http.MethodGet))
 			Expect(r.URL.Path).To(Equal("/mcp/get-resume"))
 
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"resumeId": float64(123)})
 		})
 
@@ -300,7 +301,7 @@ var _ = Describe("Resume update-base-info", func() {
 			Expect(body["realName"]).To(Equal("Test User"))
 			Expect(body["sex"]).To(Equal("男"))
 			Expect(body["birthday"]).To(Equal("19950101"))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -316,7 +317,7 @@ var _ = Describe("Resume update-base-info", func() {
 			body := decodeBody(r)
 			Expect(body["startJob"]).To(Equal("2020"))
 			Expect(body["startJobMonth"]).To(Equal("06"))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -331,7 +332,7 @@ var _ = Describe("Resume update-base-info", func() {
 			body := decodeBody(r)
 			Expect(body["nowSalary"]).To(Equal(float64(30000)))
 			Expect(body["nowMonths"]).To(Equal(float64(13)))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -354,7 +355,7 @@ var _ = Describe("Resume update-self-assess", func() {
 			Expect(r.URL.Path).To(Equal("/mcp/update-self-assess"))
 			body := decodeBody(r)
 			Expect(body["selfAssess"]).To(Equal("Experienced backend engineer"))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"ok": true})
 		})
 
@@ -379,7 +380,7 @@ var _ = Describe("Resume education experience", func() {
 				Expect(body["degree"]).To(Equal("040"))
 				Expect(body["start"]).To(Equal("201909"))
 				Expect(body["end"]).To(Equal("202306"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -398,7 +399,7 @@ var _ = Describe("Resume education experience", func() {
 				body := decodeBody(r)
 				Expect(body["eduId"]).To(Equal(float64(100)))
 				Expect(body["school"]).To(Equal("Tsinghua University"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -425,7 +426,7 @@ var _ = Describe("Resume work experience", func() {
 			startMockServer(func(w http.ResponseWriter, r *http.Request) {
 				body := decodeBody(r)
 				Expect(body).NotTo(HaveKey("shieldComp"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -443,7 +444,7 @@ var _ = Describe("Resume work experience", func() {
 			startMockServer(func(w http.ResponseWriter, r *http.Request) {
 				body := decodeBody(r)
 				Expect(body["shieldComp"]).To(BeTrue())
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -465,7 +466,7 @@ var _ = Describe("Resume work experience", func() {
 				Expect(body["months"]).To(Equal(float64(14)))
 				Expect(body["salary"]).To(Equal(float64(25000)))
 				Expect(body["workType"]).To(Equal(float64(1)))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -498,7 +499,7 @@ var _ = Describe("Resume project experience", func() {
 				Expect(body["position"]).To(Equal("Team Lead"))
 				Expect(body["start"]).To(Equal("202301"))
 				Expect(body["end"]).To(Equal("202312"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -528,7 +529,7 @@ var _ = Describe("Resume job want", func() {
 				Expect(industries).To(HaveLen(2))
 				Expect(industries[0]).To(Equal("IT"))
 				Expect(industries[1]).To(Equal("Finance"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -545,7 +546,7 @@ var _ = Describe("Resume job want", func() {
 				Expect(body["wantSalaryLow"]).To(Equal(float64(20000)))
 				Expect(body["wantSalaryHigh"]).To(Equal(float64(40000)))
 				Expect(body["wantSalaryMonths"]).To(Equal(float64(15)))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -563,7 +564,7 @@ var _ = Describe("Resume job want", func() {
 				body := decodeBody(r)
 				dqs := body["otherExpectDqs"].([]any)
 				Expect(dqs).To(ConsistOf("Beijing", "Shenzhen"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -581,7 +582,7 @@ var _ = Describe("Resume job want", func() {
 				body := decodeBody(r)
 				Expect(body["id"]).To(Equal(float64(99)))
 				Expect(body["jobtitle"]).To(Equal("Go Developer"))
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 				json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			})
 
@@ -644,7 +645,7 @@ var _ = Describe("Output format", func() {
 
 	It("renders valid JSON in json mode", func() {
 		startMockServer(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
 			json.NewEncoder(w).Encode(map[string]any{"resumeId": float64(1)})
 		})
 		outputFlag = "json"
@@ -659,7 +660,7 @@ var _ = Describe("Output format", func() {
 
 	It("renders plain text as-is in pretty mode", func() {
 		startMockServer(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set(client.HeaderContentType, "text/plain")
 			w.Write([]byte("hello world"))
 		})
 		outputFlag = "pretty"

@@ -24,6 +24,12 @@ type Client struct {
 	httpClient *http.Client
 }
 
+const (
+	HeaderXUserToken  = "x-user-token"
+	HeaderContentType = "Content-Type"
+	MediaTypeJSON     = "application/json"
+)
+
 type TLSError struct {
 	Err error
 }
@@ -90,7 +96,7 @@ func (c *Client) Get(path string) (any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("x-user-token", c.config.Token)
+	req.Header.Set(HeaderXUserToken, c.config.Token)
 
 	return c.doRequest(req)
 }
@@ -110,8 +116,8 @@ func (c *Client) Post(path string, payload any) (any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("x-user-token", c.config.Token)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(HeaderXUserToken, c.config.Token)
+	req.Header.Set(HeaderContentType, MediaTypeJSON)
 
 	return c.doRequest(req)
 }
@@ -139,8 +145,8 @@ func (c *Client) doRequest(req *http.Request) (any, error) {
 		return nil, &RequestError{StatusCode: resp.StatusCode, Body: bodyStr}
 	}
 
-	contentType := resp.Header.Get("Content-Type")
-	if strings.Contains(strings.ToLower(contentType), "application/json") {
+	contentType := resp.Header.Get(HeaderContentType)
+	if strings.Contains(strings.ToLower(contentType), MediaTypeJSON) {
 		var result any
 		if err := json.Unmarshal(bodyBytes, &result); err != nil {
 			return nil, fmt.Errorf("invalid JSON response: %w", err)
