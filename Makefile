@@ -21,5 +21,7 @@ test-e2e-verbose:
 clean:
 	rm -rf $(BUILD_DIR)
 
+PREFIX ?= $(HOME)/.local
 install: build
-	cp $(BUILD_DIR)/$(BINARY) /usr/local/bin/$(BINARY)
+	install -d $(PREFIX)/bin
+	install $(BUILD_DIR)/$(BINARY) $(PREFIX)/bin/$(BINARY)

@@ -16,6 +16,12 @@ make install
 liepin-cli setup
 ```
 
+`make install` copies the binary to `~/.local/bin`. Ensure that directory is in your `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"   # add to ~/.zshrc or ~/.bashrc
+```
+
 `setup` opens your browser to the Liepin auth page. Paste your token when prompted — it's verified against the API and saved to `~/.config/liepin-cli/config.json`.
 
 ## Token Sources
@@ -87,7 +93,7 @@ liepin-cli job apply --job-id 123456 --job-kind 1
 
 ```bash
 make build           # Build binary → bin/liepin-cli
-make install         # Build and copy to /usr/local/bin
+make install         # Build and copy to ~/.local/bin
 make test            # Run all unit tests
 make test-verbose    # Run unit tests with verbose output
 make test-e2e        # Run e2e tests against the real API
