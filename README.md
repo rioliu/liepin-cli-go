@@ -112,29 +112,3 @@ export LIEPIN_USER_TOKEN="your-token"
 make test-e2e
 ```
 
-## Project Structure
-
-```
-├── main.go                  # Entry point
-├── cmd/
-│   ├── root.go              # Root command
-│   ├── setup.go             # Interactive auth setup
-│   ├── auth.go              # Auth status/clear/open
-│   ├── resume.go            # Resume subcommands
-│   ├── job.go               # Job search and apply
-│   └── common.go            # Shared helpers
-├── internal/
-│   ├── client/              # HTTP client
-│   ├── config/              # Config resolution
-│   ├── models/              # Input types and validation
-│   ├── payload/             # Payload file loading and merging
-│   ├── output/              # Response rendering (pretty/JSON)
-│   ├── authstore/           # Token persistence
-│   ├── browser/             # OS browser opener
-│   ├── interaction/         # Terminal prompts
-│   └── onboarding/          # Auth setup flow
-├── test/
-│   └── e2e/                 # E2E tests (build tag: e2e)
-├── Makefile
-└── go.mod
-```
