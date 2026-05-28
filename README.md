@@ -112,3 +112,13 @@ export LIEPIN_USER_TOKEN="your-token"
 make test-e2e
 ```
 
+## Claude Code Integration
+
+This repo includes a Claude Code skill (`.claude/skills/liepin-cli/`) that teaches Claude how to use `liepin-cli`. When you open this repo in Claude Code, the skill is loaded automatically — Claude will prefer running CLI commands over ad-hoc HTTP requests for Liepin operations.
+
+If you want the skill available outside this repo, copy it to your global skills:
+
+```bash
+cp -r .claude/skills/liepin-cli ~/.claude/skills/
+```
+
