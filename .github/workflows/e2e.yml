@@ -1,6 +1,6 @@
 # End-to-end tests against the live Liepin API.
 #
-# Three ways to trigger:
+# Two ways to trigger:
 #
 #   1. PR slash command:  comment "/test e2e" (or "/test all" / "/retest")
 #                         on a PR. The companion e2e-dispatch.yml workflow
@@ -13,10 +13,7 @@
 #
 #   2. Manual: click "Run workflow" in the Actions UI or
 #              `gh workflow run e2e.yml`. Both pr_number and head_sha are
-#              optional; with neither set, runs against current main.
-#
-#   3. Post-merge canary: every push to main runs e2e once so we catch
-#              regressions even if /test e2e wasn't used during review.
+#              optional; with neither set, runs against the current HEAD.
 #
 # Why a runner workflow at all (instead of just running e2e inline in
 # the dispatcher):
@@ -44,14 +41,12 @@ on:
         description: "Override LIEPIN_BASE_URL (leave blank to use production)"
         required: false
         default: ""
-  push:
-    branches: [main]
 
-# Per-PR queue (or a single 'main' queue for canary runs). cancel-in-progress
+# Per-PR queue. cancel-in-progress
 # is false because e2e runs have real side effects on a live Liepin account
 # — never abort one mid-flight just because another was queued.
 concurrency:
-  group: e2e-${{ inputs.pr_number || 'main' }}
+  group: e2e-${{ inputs.pr_number || github.run_id }}
   cancel-in-progress: false
 
 permissions:
@@ -66,7 +61,7 @@ jobs:
       LIEPIN_USER_TOKEN: ${{ secrets.LIEPIN_USER_TOKEN }}
       LIEPIN_BASE_URL:   ${{ inputs.base_url }}
       PR_NUMBER:         ${{ inputs.pr_number }}
-      # Default to the dispatching commit for non-PR runs (manual or canary).
+      # Default to the dispatching commit for manual runs.
       HEAD_SHA:          ${{ inputs.head_sha || github.sha }}
       GH_TOKEN:          ${{ github.token }}
     steps:
@@ -88,8 +83,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # For dispatched PR runs: check out the exact head SHA captured
-          # at dispatch time. For manual / canary runs: HEAD_SHA falls back
-          # to github.sha, which is whatever ref triggered the workflow.
+          # at dispatch time. For manual runs: HEAD_SHA falls back to
+          # github.sha, which is whatever ref triggered the workflow.
           ref: ${{ env.HEAD_SHA }}
 
       - uses: actions/setup-go@v5
