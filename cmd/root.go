@@ -6,10 +6,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version is the CLI version string. It can be overridden at build time via:
+//
+//	go build -ldflags "-X github.com/rioliu/liepin-cli-go/cmd.version=v1.2.3"
+var version = "dev"
+
 var rootCmd = &cobra.Command{
-	Use:   "liepin-cli",
-	Short: "Liepin resume and job CLI.",
-	Long:  "Liepin resume and job CLI — local CLI for Liepin resume queries/updates, job search and applications.",
+	Use:     "liepin-cli",
+	Short:   "Liepin resume and job CLI.",
+	Long:    "Liepin resume and job CLI — local CLI for Liepin resume queries/updates, job search and applications.",
+	Version: version,
 }
 
 func init() {

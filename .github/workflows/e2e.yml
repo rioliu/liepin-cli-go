@@ -106,7 +106,6 @@ jobs:
             exit 1
           fi
           echo "Running e2e suite against ${LIEPIN_BASE_URL:-production}"
-          # -count=1 defeats Go's test cache — every dispatch is a real run.
           set -o pipefail
           go test -tags e2e -count=1 -v ./test/e2e/... 2>&1 | tee e2e.log
 
@@ -121,9 +120,6 @@ jobs:
       - name: Finalize PR check
         if: always() && env.PR_NUMBER != '' && steps.check_create.outputs.id != ''
         env:
-          # job.status is 'success' if all prior steps in this job succeeded,
-          # 'failure' otherwise. 'cancelled' is also possible but we map it
-          # to failure since e2e cancellation usually means a real problem.
           CONCLUSION: ${{ job.status == 'success' && 'success' || 'failure' }}
         run: |
           if [ "${CONCLUSION}" = "success" ]; then
@@ -131,9 +127,21 @@ jobs:
           else
             title="E2E suite failed"
           fi
+
+          # Build a markdown summary with the test results inline
+          summary_file=$(mktemp)
+          {
+            printf '## E2E Results\n\n'
+            printf '```\n'
+            tail -12 e2e.log 2>/dev/null || echo '(no output)'
+            printf '\n```\n\n'
+            printf '[Full workflow run](%s/%s/actions/runs/%s)\n' \
+              "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${GITHUB_RUN_ID}"
+          } > "$summary_file"
+
           gh api -X PATCH "repos/${GITHUB_REPOSITORY}/check-runs/${{ steps.check_create.outputs.id }}" \
             -f status=completed \
             -f conclusion="${CONCLUSION}" \
             -f details_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             -f "output[title]=${title}" \
-            -f "output[summary]=See the workflow run for the full test log."
+            -F "output[summary]=@${summary_file}"
