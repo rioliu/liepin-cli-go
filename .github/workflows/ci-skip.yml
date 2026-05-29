@@ -1,0 +1,83 @@
+# Companion stub for ci.yml.
+#
+# Why this file exists:
+#   GitHub branch protection lists the seven jobs in ci.yml (build, test,
+#   vet, lint, fmt-check, tidy-check, govulncheck) as REQUIRED status
+#   checks. If ci.yml is skipped by its `paths:` filter on a docs-only PR,
+#   those required checks would never report and the PR would be
+#   unmergeable.
+#
+#   This workflow shares the same `name: CI` and the same seven job names
+#   as ci.yml, but only triggers on PRs that do NOT touch the code paths.
+#   Each job is a one-line `echo` that reports success in ~5 seconds, so
+#   the required-check contract is satisfied without spinning up the Go
+#   toolchain or running any real work.
+#
+# IMPORTANT: the paths-ignore list below MUST be the EXACT complement of
+# the paths list in ci.yml. If you change one, change the other. Any
+# overlap (path in both) or gap (path in neither) breaks the gate.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.golangci.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/ci-skip.yml'
+
+# Match ci.yml's concurrency so a quick succession of doc-then-code or
+# code-then-doc pushes on the same PR don't pile up.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"
+
+  vet:
+    name: vet
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"
+
+  fmt-check:
+    name: fmt-check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"
+
+  tidy-check:
+    name: tidy-check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"
+
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no Go source / module changes — CI not required"

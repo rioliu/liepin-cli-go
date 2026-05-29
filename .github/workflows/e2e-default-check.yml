@@ -1,0 +1,78 @@
+# Auto-publishes the `e2e` check on every PR so the required status check
+# contract is always satisfied, even when e2e has not been manually
+# triggered.
+#
+# This workflow is the linchpin of the "conditionally required" pattern:
+#
+#   * On a code-touching PR (touches **.go / go.mod / go.sum / CI configs):
+#     publishes `e2e` as neutral (⚪). GitHub treats neutral as passing
+#     for required-check purposes, so the PR is mergeable. When the
+#     author later comments "/test e2e", the e2e runner transitions this
+#     check to in_progress → success/failure.
+#
+#   * On a docs-only PR:
+#     publishes `e2e` as success (✅). Docs-only changes are irrelevant
+#     to e2e validation and the author should not need to run e2e.
+#     The check summary makes the "N/A — docs only" intent clear.
+#
+#   * When a new commit is pushed to an existing PR, the head SHA changes
+#     and a fresh default check is published for the new SHA, resetting
+#     the gate. The author must re-comment "/test e2e" on the new code.
+#
+# IMPORTANT: the changed-file detection in the `detect` step uses the
+# SAME path list as ci.yml's `paths:` filter. If you change one, change
+# the other.
+
+name: E2E Default Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  checks: write           # publish the `e2e` check run
+  pull-requests: write    # post a one-time instructional comment
+
+jobs:
+  publish:
+    name: publish-default-e2e
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Detect and publish e2e check
+        run: |
+          files=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
+            --paginate --jq '.[].filename')
+          is_code="false"
+          for f in $files; do
+            case "$f" in
+              *.go|go.mod|go.sum|.golangci.yml|.github/workflows/ci.yml|.github/workflows/ci-skip.yml)
+                is_code="true"
+                break
+                ;;
+            esac
+          done
+          echo "PR touches code paths: ${is_code}"
+
+          if [ "$is_code" = "true" ]; then
+            conclusion="neutral"
+            title="E2E not yet run"
+            summary="Comment \`/test e2e\` on this PR to validate against the live Liepin API. The \`e2e\` check is required for merge — if it fails, the PR cannot be merged until the issue is fixed and e2e is re-run."
+          else
+            conclusion="success"
+            title="E2E N/A"
+            summary="No Go source or module changes — e2e validation is not required for this PR."
+          fi
+
+          echo "Publishing e2e check as: ${conclusion}"
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/check-runs" \
+            -f name=e2e \
+            -f head_sha="${HEAD_SHA}" \
+            -f status=completed \
+            -f conclusion="${conclusion}" \
+            -f "output[title]=${title}" \
+            -f "output[summary]=${summary}"
