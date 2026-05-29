@@ -1,0 +1,139 @@
+# End-to-end tests against the live Liepin API.
+#
+# Three ways to trigger:
+#
+#   1. PR slash command:  comment "/test e2e" (or "/test all" / "/retest")
+#                         on a PR. The companion e2e-dispatch.yml workflow
+#                         parses the comment, verifies the commenter is a
+#                         trusted author, and dispatches THIS workflow with
+#                         pr_number + head_sha inputs.
+#                         The run publishes an `e2e` check on the PR that
+#                         starts as in_progress and ends as success/failure.
+#                         Failure blocks merge (e2e is a required check).
+#
+#   2. Manual: click "Run workflow" in the Actions UI or
+#              `gh workflow run e2e.yml`. Both pr_number and head_sha are
+#              optional; with neither set, runs against current main.
+#
+#   3. Post-merge canary: every push to main runs e2e once so we catch
+#              regressions even if /test e2e wasn't used during review.
+#
+# Why a runner workflow at all (instead of just running e2e inline in
+# the dispatcher):
+#   The dispatcher is triggered by `issue_comment` events and intentionally
+#   has minimal scope so it can't be abused. Splitting the actual e2e work
+#   into a dedicated `workflow_dispatch`-triggered workflow keeps the
+#   secret-using job isolated and easy to audit. This is the same pattern
+#   Kubernetes' Prow uses (a lightweight intent layer + a privileged
+#   execution layer).
+
+name: E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number this run is associated with (leave blank for main runs)"
+        required: false
+        default: ""
+      head_sha:
+        description: "Commit SHA to test (defaults to main)"
+        required: false
+        default: ""
+      base_url:
+        description: "Override LIEPIN_BASE_URL (leave blank to use production)"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+
+# Per-PR queue (or a single 'main' queue for canary runs). cancel-in-progress
+# is false because e2e runs have real side effects on a live Liepin account
+# — never abort one mid-flight just because another was queued.
+concurrency:
+  group: e2e-${{ inputs.pr_number || 'main' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  checks: write           # publish the `e2e` check run on PR head SHAs
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    env:
+      LIEPIN_USER_TOKEN: ${{ secrets.LIEPIN_USER_TOKEN }}
+      LIEPIN_BASE_URL:   ${{ inputs.base_url }}
+      PR_NUMBER:         ${{ inputs.pr_number }}
+      # Default to the dispatching commit for non-PR runs (manual or canary).
+      HEAD_SHA:          ${{ inputs.head_sha || github.sha }}
+      GH_TOKEN:          ${{ github.token }}
+    steps:
+      - name: Publish in_progress e2e check on PR head SHA
+        id: check_create
+        if: env.PR_NUMBER != ''
+        run: |
+          summary="Running e2e suite against ${LIEPIN_BASE_URL:-production}."
+          check_id=$(gh api -X POST "repos/${GITHUB_REPOSITORY}/check-runs" \
+            -f name=e2e \
+            -f head_sha="${HEAD_SHA}" \
+            -f status=in_progress \
+            -f details_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            -f "output[title]=E2E suite (in progress)" \
+            -f "output[summary]=${summary}" \
+            -q .id)
+          echo "id=${check_id}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          # For dispatched PR runs: check out the exact head SHA captured
+          # at dispatch time. For manual / canary runs: HEAD_SHA falls back
+          # to github.sha, which is whatever ref triggered the workflow.
+          ref: ${{ env.HEAD_SHA }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.3"
+          cache: true
+
+      - name: Run e2e suite
+        id: run_tests
+        run: |
+          if [ -z "${LIEPIN_USER_TOKEN}" ]; then
+            echo "::error::LIEPIN_USER_TOKEN secret is not set."
+            echo "::error::Add it with:  gh secret set LIEPIN_USER_TOKEN --repo \$GITHUB_REPOSITORY"
+            exit 1
+          fi
+          echo "Running e2e suite against ${LIEPIN_BASE_URL:-production}"
+          # -count=1 defeats Go's test cache — every dispatch is a real run.
+          set -o pipefail
+          go test -tags e2e -count=1 -v ./test/e2e/... 2>&1 | tee e2e.log
+
+      - name: Upload e2e log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-log-${{ env.HEAD_SHA }}
+          path: e2e.log
+          if-no-files-found: ignore
+
+      - name: Finalize PR check
+        if: always() && env.PR_NUMBER != '' && steps.check_create.outputs.id != ''
+        env:
+          # job.status is 'success' if all prior steps in this job succeeded,
+          # 'failure' otherwise. 'cancelled' is also possible but we map it
+          # to failure since e2e cancellation usually means a real problem.
+          CONCLUSION: ${{ job.status == 'success' && 'success' || 'failure' }}
+        run: |
+          if [ "${CONCLUSION}" = "success" ]; then
+            title="E2E suite passed"
+          else
+            title="E2E suite failed"
+          fi
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/check-runs/${{ steps.check_create.outputs.id }}" \
+            -f status=completed \
+            -f conclusion="${CONCLUSION}" \
+            -f details_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            -f "output[title]=${title}" \
+            -f "output[summary]=See the workflow run for the full test log."

@@ -1,15 +1,29 @@
 # Presubmit CI for liepin-cli-go.
 #
-# Runs on every pull request targeting main, and on direct pushes to main
-# so the badge in the README (if added later) stays accurate. All jobs run
-# in parallel; mark the ones you care about as required status checks in
-# the branch protection rule.
+# Runs on pull requests that touch Go source or module files, and on every
+# push to main (no path filter on the main trigger — merges always produce
+# a real CI run so the badge / branch state is accurate). All jobs run
+# in parallel; the matching set is mirrored in ci-skip.yml so PRs that
+# touch only docs still satisfy the required status checks without
+# spinning up the Go toolchain.
+#
+# IMPORTANT: when you change the paths filter below, you MUST mirror the
+# change in .github/workflows/ci-skip.yml so the two workflows remain
+# perfect complements. A docs-only PR must match ci-skip.yml; a code PR
+# must match this file; no PR should match both or neither.
 
 name: CI
 
 on:
   pull_request:
     branches: [main]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.golangci.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/ci-skip.yml'
   push:
     branches: [main]
 

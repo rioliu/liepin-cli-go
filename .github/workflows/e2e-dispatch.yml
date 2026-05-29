@@ -1,0 +1,122 @@
+# Slash-command dispatcher for the e2e workflow.
+#
+# Listens for new comments on issues (PRs are a kind of issue from the
+# API's perspective). When a trusted commenter posts one of the recognized
+# slash commands, this workflow:
+#
+#   1. Verifies the commenter has write access to this repo
+#      (author_association ∈ {OWNER, COLLABORATOR, MEMBER}).
+#   2. Reacts to the comment with 👀 to acknowledge receipt.
+#   3. Looks up the PR's current head SHA.
+#   4. Dispatches the e2e.yml workflow with pr_number + head_sha inputs.
+#
+# Recognized commands (all case-sensitive, first line of comment only):
+#   /test e2e        — run e2e suite
+#   /test all        — alias for /test e2e (forward-compatible if more
+#                      opt-in suites are added later)
+#   /retest          — alias for /test e2e
+#
+# Security notes:
+#   * Trigger type is `issue_comment`, NOT `pull_request_target`. This
+#     workflow never checks out the PR's code, so a malicious PR cannot
+#     modify what this dispatcher does. The dispatcher only reads
+#     metadata (comment body, PR head SHA).
+#   * The author-trust gate prevents drive-by commenters from burning
+#     CI minutes or triggering use of the LIEPIN_USER_TOKEN secret.
+#   * The dispatched e2e.yml workflow is loaded from the default branch
+#     (main), NOT from the PR's branch — so changing e2e.yml on a PR
+#     branch cannot exfiltrate the secret. Only main-branch changes
+#     to e2e.yml take effect, and those go through normal PR review.
+
+name: E2E Dispatch
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write    # react to comment, post status
+  actions: write          # dispatch the e2e workflow
+
+jobs:
+  dispatch:
+    # issue_comment fires on both issues and PRs. We only care about PRs.
+    if: github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Parse slash command
+        id: parse
+        env:
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          # Only look at the first non-empty line. This prevents accidental
+          # triggers from people quoting a command in the middle of a longer
+          # comment.
+          first_line=$(printf '%s\n' "$BODY" | sed -n '/^[[:space:]]*$/!{p;q;}' | tr -d '\r' | sed 's/[[:space:]]*$//')
+          case "$first_line" in
+            "/test e2e"|"/test all"|"/retest")
+              echo "matched=true"   >> "$GITHUB_OUTPUT"
+              echo "command=${first_line}" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "matched=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Stop quietly if not a recognized command
+        if: steps.parse.outputs.matched != 'true'
+        run: |
+          echo "Comment did not start with a recognized command — nothing to do."
+          exit 0
+
+      - name: Check commenter is trusted
+        if: >-
+          steps.parse.outputs.matched == 'true' &&
+          github.event.comment.author_association != 'OWNER' &&
+          github.event.comment.author_association != 'COLLABORATOR' &&
+          github.event.comment.author_association != 'MEMBER'
+        run: |
+          echo "::warning::Ignoring '${{ steps.parse.outputs.command }}' from untrusted author (${{ github.event.comment.author_association }})."
+          # Leave a 👎 reaction so the commenter sees the command was rejected
+          # rather than silently swallowed.
+          gh api -X POST \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content="-1" || true
+          exit 0
+
+      - name: Resolve PR head SHA
+        id: head
+        if: >-
+          steps.parse.outputs.matched == 'true' && (
+            github.event.comment.author_association == 'OWNER' ||
+            github.event.comment.author_association == 'COLLABORATOR' ||
+            github.event.comment.author_association == 'MEMBER'
+          )
+        run: |
+          sha=$(gh pr view "${{ github.event.issue.number }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json headRefOid -q .headRefOid)
+          if [ -z "$sha" ]; then
+            echo "::error::Could not resolve head SHA for PR #${{ github.event.issue.number }}."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: React 👀 to acknowledge the command
+        if: steps.head.outputs.sha != ''
+        run: |
+          gh api -X POST \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content=eyes || true
+
+      - name: Dispatch e2e runner
+        if: steps.head.outputs.sha != ''
+        run: |
+          gh workflow run e2e.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main \
+            -f pr_number=${{ github.event.issue.number }} \
+            -f head_sha=${{ steps.head.outputs.sha }}
+          echo "Dispatched e2e against PR #${{ github.event.issue.number }} @ ${{ steps.head.outputs.sha }}"
