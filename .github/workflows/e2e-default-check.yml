@@ -43,8 +43,7 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
-      - name: Detect whether PR touches code paths
-        id: detect
+      - name: Detect and publish e2e check
         run: |
           files=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
             --paginate --jq '.[].filename')
@@ -57,27 +56,23 @@ jobs:
                 ;;
             esac
           done
-          echo "is_code=${is_code}" >> "$GITHUB_OUTPUT"
           echo "PR touches code paths: ${is_code}"
 
-      - name: Publish neutral e2e check (code PR)
-        if: steps.detect.outputs.is_code == 'true'
-        run: |
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/check-runs" \
-            -f name=e2e \
-            -f head_sha="${HEAD_SHA}" \
-            -f status=completed \
-            -f conclusion=neutral \
-            -f "output[title]=E2E not yet run" \
-            -f "output[summary]=Comment \`/test e2e\` on this PR to validate against the live Liepin API. The \`e2e\` check is required for merge — if it fails, the PR cannot be merged until the issue is fixed and e2e is re-run."
+          if [ "$is_code" = "true" ]; then
+            conclusion="neutral"
+            title="E2E not yet run"
+            summary="Comment \`/test e2e\` on this PR to validate against the live Liepin API. The \`e2e\` check is required for merge — if it fails, the PR cannot be merged until the issue is fixed and e2e is re-run."
+          else
+            conclusion="success"
+            title="E2E N/A"
+            summary="No Go source or module changes — e2e validation is not required for this PR."
+          fi
 
-      - name: Publish success e2e check (docs-only PR)
-        if: steps.detect.outputs.is_code != 'true'
-        run: |
+          echo "Publishing e2e check as: ${conclusion}"
           gh api -X POST "repos/${GITHUB_REPOSITORY}/check-runs" \
             -f name=e2e \
             -f head_sha="${HEAD_SHA}" \
             -f status=completed \
-            -f conclusion=success \
-            -f "output[title]=E2E N/A" \
-            -f "output[summary]=No Go source or module changes — e2e validation is not required for this PR."
+            -f conclusion="${conclusion}" \
+            -f "output[title]=${title}" \
+            -f "output[summary]=${summary}"
