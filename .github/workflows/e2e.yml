@@ -1,0 +1,69 @@
+# End-to-end tests against the live Liepin API.
+#
+# Why this lives in a separate workflow:
+#   * The e2e suite is build-tagged with `//go:build e2e` and is intentionally
+#     excluded from the default `go test ./...` used in CI presubmit (ci.yml).
+#   * It hits the real Liepin backend with a real x-user-token, so it can be
+#     slow, flaky for non-code reasons (network, rate limits, backend deploys),
+#     and is therefore unsuitable for blocking every PR.
+#   * Triggered manually so the operator stays in control of when the live
+#     account is exercised.
+#
+# Prerequisite:
+#   * A repository secret named LIEPIN_USER_TOKEN must contain a valid token.
+#   * Optionally set a LIEPIN_BASE_URL workflow input to target a non-prod
+#     environment; leave blank to use the default production endpoint.
+
+name: E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override LIEPIN_BASE_URL (leave blank to use production)"
+        required: false
+        default: ""
+
+# E2E runs have real side effects on a live account. Never cancel an
+# in-progress run just because a new one was queued; queue them instead.
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26.3"
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    # Defense in depth: never expose the secret to PRs from forks. This
+    # workflow uses workflow_dispatch only, but the guard documents intent
+    # and makes a future trigger change safer.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run e2e suite
+        env:
+          LIEPIN_USER_TOKEN: ${{ secrets.LIEPIN_USER_TOKEN }}
+          LIEPIN_BASE_URL: ${{ inputs.base_url }}
+        run: |
+          if [ -z "${LIEPIN_USER_TOKEN}" ]; then
+            echo "::warning::LIEPIN_USER_TOKEN secret is not set; skipping e2e."
+            echo "::warning::Add it via:  gh secret set LIEPIN_USER_TOKEN --repo \$GITHUB_REPOSITORY"
+            exit 0
+          fi
+          echo "Running e2e suite against ${LIEPIN_BASE_URL:-production}"
+          # -count=1 disables Go test caching so e2e always re-runs.
+          go test -tags e2e -count=1 -v ./test/e2e/...
