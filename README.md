@@ -21,6 +21,10 @@ Add the `export PATH` line to `~/.zshrc` or `~/.bashrc` to make it permanent.
 
 `setup` opens your browser to the Liepin auth page. Paste your token when prompted — it's verified against the API and saved to `~/.config/liepin-cli/config.json`.
 
+## Using the CLI
+
+Run `liepin-cli setup` to configure your token, then use the subcommands.
+
 ## Token Sources
 
 The CLI resolves your token in this order (first found wins):
