@@ -1,3 +1,6 @@
+// Package interaction provides small helpers for terminal interactions such
+// as detecting an interactive TTY and prompting the user for confirmation
+// or sensitive input.
 package interaction
 
 import (
@@ -7,6 +10,9 @@ import (
 	"strings"
 )
 
+// IsInteractiveTerminal reports whether both stdin and stdout are connected
+// to a character device (i.e. a real terminal), so that interactive prompts
+// are safe to issue.
 func IsInteractiveTerminal() bool {
 	stdinInfo, err := os.Stdin.Stat()
 	if err != nil {
@@ -20,6 +26,9 @@ func IsInteractiveTerminal() bool {
 		(stdoutInfo.Mode()&os.ModeCharDevice) != 0
 }
 
+// ConfirmOpenAuthPage prompts the user (Y/n, defaulting to yes) for
+// permission to launch the Liepin auth page. It returns false when stdin or
+// stdout is not a terminal, or when the user explicitly declines.
 func ConfirmOpenAuthPage() bool {
 	if !IsInteractiveTerminal() {
 		return false
@@ -34,6 +43,9 @@ func ConfirmOpenAuthPage() bool {
 	return input == "" || input == "y" || input == "yes"
 }
 
+// PromptForToken asks the user to paste an x-user-token into the terminal
+// and returns the trimmed value. It returns an empty string when not running
+// in an interactive terminal or when reading from stdin fails.
 func PromptForToken() string {
 	if !IsInteractiveTerminal() {
 		return ""

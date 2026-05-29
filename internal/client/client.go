@@ -1,3 +1,6 @@
+// Package client implements an HTTP client for the Liepin open-agent API.
+// It centralizes token handling, base-URL joining, TLS configuration, and
+// the typed error returned for authorization, request, and TLS failures.
 package client
 
 import (
@@ -12,6 +15,7 @@ import (
 	"time"
 )
 
+// Config holds the runtime parameters used to construct a Client.
 type Config struct {
 	Token              string
 	BaseURL            string
@@ -19,17 +23,24 @@ type Config struct {
 	InsecureSkipVerify bool
 }
 
+// Client is an HTTP client that talks to the Liepin open-agent API. It
+// automatically attaches the configured x-user-token to outgoing requests
+// and decodes JSON responses.
 type Client struct {
 	config     Config
 	httpClient *http.Client
 }
 
+// HTTP header names and media types used by the Liepin client.
 const (
 	HeaderXUserToken  = "x-user-token"
 	HeaderContentType = "Content-Type"
 	MediaTypeJSON     = "application/json"
 )
 
+// TLSError wraps a transport-layer TLS or x509 failure so callers can
+// distinguish certificate issues from generic request errors and surface a
+// helpful hint (such as the --insecure flag).
 type TLSError struct {
 	Err error
 }
@@ -38,6 +49,9 @@ func (e *TLSError) Error() string {
 	return e.Err.Error()
 }
 
+// New creates a Client using the supplied Config. When InsecureSkipVerify is
+// true, the underlying HTTP transport is cloned with TLS verification
+// disabled (intended for development against self-signed servers only).
 func New(config Config) *Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if config.InsecureSkipVerify {
@@ -54,6 +68,8 @@ func New(config Config) *Client {
 	}
 }
 
+// RequestError represents a non-2xx HTTP response from the API that is not
+// an authentication failure. Body contains the trimmed response body, if any.
 type RequestError struct {
 	StatusCode int
 	Body       string
@@ -67,6 +83,9 @@ func (e *RequestError) Error() string {
 	return strings.Join(parts, " ")
 }
 
+// AuthorizationError is returned when the API responds with 401 Unauthorized
+// or 403 Forbidden, indicating that the configured token is missing,
+// expired, or lacks the required permissions.
 type AuthorizationError struct {
 	StatusCode int
 	Body       string
@@ -86,6 +105,10 @@ func (c *Client) buildURL(path string) (string, error) {
 	return url.JoinPath(base, rel)
 }
 
+// Get performs an HTTP GET against the given API path (joined to BaseURL),
+// attaches the configured token header, and returns the decoded response.
+// Errors of type *AuthorizationError, *RequestError, or *TLSError signal
+// specific failure modes; all other errors are wrapped with %w.
 func (c *Client) Get(path string) (any, error) {
 	reqURL, err := c.buildURL(path)
 	if err != nil {
@@ -101,6 +124,10 @@ func (c *Client) Get(path string) (any, error) {
 	return c.doRequest(req)
 }
 
+// Post performs an HTTP POST against the given API path (joined to BaseURL)
+// with the supplied payload marshalled as JSON. It returns the decoded
+// response body, or one of *AuthorizationError, *RequestError, *TLSError
+// for the corresponding failure modes.
 func (c *Client) Post(path string, payload any) (any, error) {
 	reqURL, err := c.buildURL(path)
 	if err != nil {

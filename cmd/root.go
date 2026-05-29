@@ -1,3 +1,5 @@
+// Package cmd assembles the cobra command tree for the liepin-cli binary
+// and exposes Execute as the single entry point used by main.
 package cmd
 
 import (
@@ -17,6 +19,8 @@ func init() {
 	rootCmd.AddCommand(jobCmd)
 }
 
+// Execute runs the root cobra command and returns any error produced by the
+// selected sub-command. It is the single entry point used by main.
 func Execute() error {
 	return rootCmd.Execute()
 }

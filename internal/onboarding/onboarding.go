@@ -1,3 +1,5 @@
+// Package onboarding implements the first-run flow that helps a user
+// acquire and persist an x-user-token for the Liepin CLI.
 package onboarding
 
 import (
@@ -10,6 +12,9 @@ import (
 	"github.com/rioliu/liepin-cli-go/internal/interaction"
 )
 
+// MaskToken returns a redacted, log-safe representation of an x-user-token.
+// The leading prefix (up to the last "-") is preserved, and only the last
+// few characters of the secret portion are revealed.
 func MaskToken(token string) string {
 	if token == "" {
 		return ""
@@ -28,6 +33,10 @@ func MaskToken(token string) string {
 	return "****" + token[len(token)-4:]
 }
 
+// RunAuthSetup walks the user through the interactive token-onboarding
+// flow: optionally opening the auth page, prompting for the token,
+// verifying it via the supplied callback, and persisting the result via
+// authstore. The accepted token is returned to the caller for display.
 func RunAuthSetup(verify func(string) error) (string, error) {
 	interactive := interaction.IsInteractiveTerminal()
 

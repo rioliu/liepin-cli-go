@@ -1,3 +1,5 @@
+// Package payload provides helpers for loading and merging JSON request
+// payloads supplied to commands via the --input/-i flag.
 package payload
 
 import (
@@ -6,6 +8,9 @@ import (
 	"os"
 )
 
+// LoadPayloadFile reads a JSON file from path and returns it as a generic
+// map. An empty path yields an empty map (used to mean "no file supplied").
+// Missing files produce a user-facing "input file not found" error.
 func LoadPayloadFile(path string) (map[string]any, error) {
 	if path == "" {
 		return map[string]any{}, nil
@@ -27,6 +32,9 @@ func LoadPayloadFile(path string) (map[string]any, error) {
 	return data, nil
 }
 
+// MergePayload combines a base map with overrides, returning a new map.
+// Non-nil values in overrides take precedence over base, and any keys whose
+// final value is nil are dropped from the result.
 func MergePayload(base map[string]any, overrides map[string]any) map[string]any {
 	merged := make(map[string]any)
 	for k, v := range base {

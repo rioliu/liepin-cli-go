@@ -1,3 +1,6 @@
+// Package models defines the input payload structs sent to the Liepin API
+// and the shared validation helpers used to check user-supplied data
+// before issuing a request.
 package models
 
 import (
@@ -14,6 +17,9 @@ var (
 	reDateYmd   = regexp.MustCompile(`^\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$`)
 )
 
+// ValidationError describes a single input-validation failure on a named
+// field. It implements the error interface so individual failures can also
+// be returned directly when convenient.
 type ValidationError struct {
 	Field   string
 	Message string
@@ -23,6 +29,9 @@ func (e *ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
+// ValidationErrors is a collection of ValidationError values gathered while
+// validating a single input struct. Its Error method joins all individual
+// messages with "; " for display.
 type ValidationErrors []ValidationError
 
 func (e ValidationErrors) Error() string {
@@ -72,6 +81,8 @@ func validateNonNegative(field string, value int, isSet bool, errors *[]Validati
 	}
 }
 
+// StrPtr returns a pointer to s, or nil if s is empty. It is useful for
+// building optional fields in request payloads from CLI flag values.
 func StrPtr(s string) *string {
 	if s == "" {
 		return nil
@@ -89,6 +100,8 @@ func SafeString(s *string) string {
 
 // --- SearchJobInput ---
 
+// SearchJobInput is the request body for the job-search endpoint. All
+// fields are optional; nil pointers are omitted from the marshalled JSON.
 type SearchJobInput struct {
 	WorkExperience *string `json:"workExperience,omitempty"`
 	EduLevel       *string `json:"eduLevel,omitempty"`
@@ -102,6 +115,8 @@ type SearchJobInput struct {
 	Page           *int    `json:"page,omitempty"`
 }
 
+// Validate checks SearchJobInput for invalid field values and returns a
+// ValidationErrors collection when one or more checks fail.
 func (m *SearchJobInput) Validate() error {
 	var errs []ValidationError
 	if m.Page != nil {
@@ -115,11 +130,14 @@ func (m *SearchJobInput) Validate() error {
 
 // --- ApplyJobInput ---
 
+// ApplyJobInput is the request body for applying to a job. Both fields are
+// required; JobKind must be either "1" or "2" per the API contract.
 type ApplyJobInput struct {
 	JobID   int    `json:"jobId"`
 	JobKind string `json:"jobKind"`
 }
 
+// Validate checks ApplyJobInput for missing or out-of-range fields.
 func (m *ApplyJobInput) Validate() error {
 	var errs []ValidationError
 	validateRequiredInt("jobId", m.JobID, true, &errs)
@@ -133,6 +151,9 @@ func (m *ApplyJobInput) Validate() error {
 
 // --- UpdateBaseInfoInput ---
 
+// UpdateBaseInfoInput is the request body for updating a candidate's basic
+// resume information. All fields are optional patches; only non-nil fields
+// are sent to the API.
 type UpdateBaseInfoInput struct {
 	RealName            *string `json:"realName,omitempty"`
 	Sex                 *string `json:"sex,omitempty"`
@@ -153,6 +174,9 @@ type UpdateBaseInfoInput struct {
 	PoliticalStatusCode *string `json:"politicalStatusCode,omitempty"`
 }
 
+// Validate enforces enum, date-format, and pairing constraints on
+// UpdateBaseInfoInput (for example startJob and startJobMonth must be set
+// together).
 func (m *UpdateBaseInfoInput) Validate() error {
 	var errs []ValidationError
 	hasStartJob := m.StartJob != nil
@@ -198,10 +222,13 @@ func (m *UpdateBaseInfoInput) Validate() error {
 
 // --- UpdateSelfAssessInput ---
 
+// UpdateSelfAssessInput is the request body for updating the self-assessment
+// section of a resume. SelfAssess is required.
 type UpdateSelfAssessInput struct {
 	SelfAssess string `json:"selfAssess"`
 }
 
+// Validate ensures SelfAssess is non-empty.
 func (m *UpdateSelfAssessInput) Validate() error {
 	var errs []ValidationError
 	validateRequired("selfAssess", m.SelfAssess, &errs)
@@ -213,6 +240,8 @@ func (m *UpdateSelfAssessInput) Validate() error {
 
 // --- AddEduExpInput ---
 
+// AddEduExpInput is the request body for adding an education experience.
+// School, Start, End, and Degree are required; date fields use yyyyMM.
 type AddEduExpInput struct {
 	School     string  `json:"school"`
 	Major      *string `json:"major,omitempty"`
@@ -223,6 +252,8 @@ type AddEduExpInput struct {
 	Experience *string `json:"experience,omitempty"`
 }
 
+// Validate enforces required fields, allowed degree codes, and the yyyyMM
+// date format on AddEduExpInput.
 func (m *AddEduExpInput) Validate() error {
 	var errs []ValidationError
 	validateRequired("school", m.School, &errs)
@@ -243,6 +274,8 @@ func (m *AddEduExpInput) Validate() error {
 
 // --- UpdateEduExpInput ---
 
+// UpdateEduExpInput is the request body for patching an existing education
+// experience identified by EduID. All other fields are optional patches.
 type UpdateEduExpInput struct {
 	EduID      int     `json:"eduId"`
 	School     *string `json:"school,omitempty"`
@@ -254,6 +287,7 @@ type UpdateEduExpInput struct {
 	Experience *string `json:"experience,omitempty"`
 }
 
+// Validate requires EduID and validates any supplied optional fields.
 func (m *UpdateEduExpInput) Validate() error {
 	var errs []ValidationError
 	validateRequiredInt("eduId", m.EduID, true, &errs)
@@ -277,6 +311,8 @@ func (m *UpdateEduExpInput) Validate() error {
 
 // --- AddWorkExpInput ---
 
+// AddWorkExpInput is the request body for adding a work experience entry.
+// CompName, WorkStart, WorkEnd, and RwTitle are required.
 type AddWorkExpInput struct {
 	CompName    string  `json:"compName"`
 	Industry    *string `json:"industry,omitempty"`
@@ -298,6 +334,8 @@ type AddWorkExpInput struct {
 	WorkType    *int    `json:"workType,omitempty"`
 }
 
+// Validate enforces required fields, yyyyMM date format, non-negative
+// numeric fields, and an allowed WorkType (1 or 2) on AddWorkExpInput.
 func (m *AddWorkExpInput) Validate() error {
 	var errs []ValidationError
 	validateRequired("compName", m.CompName, &errs)
@@ -328,6 +366,8 @@ func (m *AddWorkExpInput) Validate() error {
 
 // --- UpdateWorkExpInput ---
 
+// UpdateWorkExpInput is the request body for patching an existing work
+// experience identified by WorkID. All other fields are optional patches.
 type UpdateWorkExpInput struct {
 	WorkID      int     `json:"workId"`
 	CompName    *string `json:"compName,omitempty"`
@@ -350,6 +390,8 @@ type UpdateWorkExpInput struct {
 	WorkType    *int    `json:"workType,omitempty"`
 }
 
+// Validate requires WorkID and validates any supplied optional fields,
+// including yyyyMM date format, non-negative numerics, and WorkType (1 or 2).
 func (m *UpdateWorkExpInput) Validate() error {
 	var errs []ValidationError
 	validateRequiredInt("workId", m.WorkID, true, &errs)
@@ -381,6 +423,8 @@ func (m *UpdateWorkExpInput) Validate() error {
 
 // --- AddProjectExpInput ---
 
+// AddProjectExpInput is the request body for adding a project experience
+// entry. Name, Start, and End are required.
 type AddProjectExpInput struct {
 	Name        string  `json:"name"`
 	Start       string  `json:"start"`
@@ -392,6 +436,8 @@ type AddProjectExpInput struct {
 	Achievement *string `json:"achievement,omitempty"`
 }
 
+// Validate enforces required fields and yyyyMM date format on
+// AddProjectExpInput.
 func (m *AddProjectExpInput) Validate() error {
 	var errs []ValidationError
 	validateRequired("name", m.Name, &errs)
@@ -407,6 +453,8 @@ func (m *AddProjectExpInput) Validate() error {
 
 // --- UpdateProjectExpInput ---
 
+// UpdateProjectExpInput is the request body for patching an existing
+// project experience identified by ID. Other fields are optional patches.
 type UpdateProjectExpInput struct {
 	ID          int     `json:"id"`
 	Name        *string `json:"name,omitempty"`
@@ -419,6 +467,7 @@ type UpdateProjectExpInput struct {
 	Achievement *string `json:"achievement,omitempty"`
 }
 
+// Validate requires ID and validates any supplied yyyyMM date fields.
 func (m *UpdateProjectExpInput) Validate() error {
 	var errs []ValidationError
 	validateRequiredInt("id", m.ID, true, &errs)
@@ -436,6 +485,9 @@ func (m *UpdateProjectExpInput) Validate() error {
 
 // --- AddJobWantInput ---
 
+// AddJobWantInput is the request body for adding a desired-job preference.
+// Jobtitle and Dq are required; salary and WorkType fields are validated
+// when present.
 type AddJobWantInput struct {
 	Industries       []string `json:"industries,omitempty"`
 	Jobtitle         string   `json:"jobtitle"`
@@ -449,6 +501,8 @@ type AddJobWantInput struct {
 	PracticeMonths   *int     `json:"practiceMonths,omitempty"`
 }
 
+// Validate enforces required fields and salary-range consistency
+// (wantSalaryLow must not exceed wantSalaryHigh) on AddJobWantInput.
 func (m *AddJobWantInput) Validate() error {
 	var errs []ValidationError
 	validateRequired("jobtitle", m.Jobtitle, &errs)
@@ -479,6 +533,8 @@ func (m *AddJobWantInput) Validate() error {
 
 // --- UpdateJobWantInput ---
 
+// UpdateJobWantInput is the request body for patching an existing
+// desired-job entry identified by ID. Remaining fields are optional patches.
 type UpdateJobWantInput struct {
 	ID               int      `json:"id"`
 	Jobtitle         *string  `json:"jobtitle,omitempty"`
@@ -493,6 +549,8 @@ type UpdateJobWantInput struct {
 	PracticeMonths   *int     `json:"practiceMonths,omitempty"`
 }
 
+// Validate requires ID and enforces the same salary-range and enum
+// constraints as AddJobWantInput for any supplied optional fields.
 func (m *UpdateJobWantInput) Validate() error {
 	var errs []ValidationError
 	validateRequiredInt("id", m.ID, true, &errs)
@@ -522,6 +580,9 @@ func (m *UpdateJobWantInput) Validate() error {
 
 // --- Helpers for CLI parsing ---
 
+// ParseOptionalInt converts a CLI string flag into an optional integer.
+// An empty input returns (nil, nil) to mean "not provided"; a non-empty
+// input that fails to parse returns a descriptive error.
 func ParseOptionalInt(raw string) (*int, error) {
 	if raw == "" {
 		return nil, nil
@@ -533,6 +594,9 @@ func ParseOptionalInt(raw string) (*int, error) {
 	return &v, nil
 }
 
+// ParseOptionalBool returns a pointer to v when isSet is true (meaning the
+// caller explicitly provided the flag), or nil otherwise. This lets request
+// payloads distinguish "false" from "unset".
 func ParseOptionalBool(isSet bool, v bool) *bool {
 	if !isSet {
 		return nil

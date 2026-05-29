@@ -1,3 +1,5 @@
+// Command liepin-cli is the entry point for the Liepin command-line tool.
+// It delegates to the cmd package which wires up the cobra command tree.
 package main
 
 import (
