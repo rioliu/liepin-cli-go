@@ -24,6 +24,8 @@ func resetAllFlags() {
 	searchSalaryFloor, searchSalaryCap, searchSalaryKind = "", "", ""
 	searchJobName, searchCompanyName, searchPage = "", "", ""
 	applyJobID, applyJobKind = "", ""
+	detailJobID, detailJobURL = "", ""
+	jobDetailBaseURL = "https://www.liepin.com"
 
 	realName, sex, birthday, cityCode, startJob, startJobMonth = "", "", "", "", "", ""
 	nowWorkStatus, nowSalarySecret, nameSecret, wechat = "", "", "", ""
@@ -168,6 +170,7 @@ var _ = Describe("Job command", func() {
 			rootCmd.Execute()
 		})
 		Expect(out).To(ContainSubstring("search"))
+		Expect(out).To(ContainSubstring("detail"))
 		Expect(out).To(ContainSubstring("apply"))
 	})
 })
@@ -261,6 +264,71 @@ var _ = Describe("Job apply", func() {
 			jobApplyCmd.Run(jobApplyCmd, nil)
 		})
 		Expect(out).To(ContainSubstring(`"applied": true`))
+	})
+})
+
+// ─── job detail ─────────────────────────────────────────────────────
+
+var _ = Describe("Job detail", func() {
+	BeforeEach(func() {
+		resetAllFlags()
+	})
+
+	It("fetches and renders job detail from URL", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<!DOCTYPE html>
+<html><head><title>Test</title>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    "title": "Senior Go Engineer",
+    "description": "Build distributed systems with Go.",
+    "experienceRequirements": "5+ years",
+    "educationRequirements": "Bachelor",
+    "employmentType": "FULL_TIME",
+    "hiringOrganization": {"name": "TestCorp"},
+    "jobLocation": {"address": {"streetAddress": "Beijing"}},
+    "datePosted": "2026-01-01",
+    "validThrough": "2026-12-31"
+}
+</script>
+</head><body></body></html>`))
+		}))
+		DeferCleanup(srv.Close)
+
+		detailJobURL = srv.URL
+
+		out := captureStdout(func() {
+			jobDetailCmd.Run(jobDetailCmd, nil)
+		})
+		Expect(out).To(ContainSubstring("Senior Go Engineer"))
+		Expect(out).To(ContainSubstring("distributed systems"))
+		Expect(out).To(ContainSubstring("TestCorp"))
+		Expect(out).To(ContainSubstring("Beijing"))
+	})
+
+	It("uses job-id to construct URL", func() {
+		jobDetailBaseURL = "https://www.liepin.com"
+		detailJobID = "99999"
+		url, err := buildJobDetailURL()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(url).To(Equal("https://www.liepin.com/a/99999.shtml"))
+	})
+
+	It("prefers job-detail-url over job-id", func() {
+		detailJobID = "99999"
+		detailJobURL = "https://example.com/custom"
+		url, err := buildJobDetailURL()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(url).To(Equal("https://example.com/custom"))
+	})
+
+	It("returns error when neither flag is set", func() {
+		_, err := buildJobDetailURL()
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("--job-id or --job-detail-url"))
 	})
 })
 

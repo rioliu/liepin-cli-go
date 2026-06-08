@@ -1,7 +1,12 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/rioliu/liepin-cli-go/internal/models"
+	"github.com/rioliu/liepin-cli-go/internal/output"
+	"github.com/rioliu/liepin-cli-go/internal/scraper"
 	"github.com/spf13/cobra"
 )
 
@@ -83,6 +88,47 @@ var jobSearchCmd = &cobra.Command{
 	},
 }
 
+// --- job detail ---
+
+var (
+	detailJobID  string
+	detailJobURL string
+
+	// jobDetailBaseURL is the base URL for constructing job detail URLs
+	// from --job-id. Overridable in tests.
+	jobDetailBaseURL = "https://www.liepin.com"
+)
+
+func buildJobDetailURL() (string, error) {
+	if detailJobURL != "" {
+		return detailJobURL, nil
+	}
+	if detailJobID != "" {
+		return fmt.Sprintf("%s/a/%s.shtml", jobDetailBaseURL, detailJobID), nil
+	}
+	return "", fmt.Errorf("either --job-id or --job-detail-url is required")
+}
+
+var jobDetailCmd = &cobra.Command{
+	Use:   "detail",
+	Short: "Get full job description.",
+	Long:  "Get full job description by scraping the job detail page. Use --job-detail-url from search results, or --job-id for headhunter jobs.",
+	Run: func(_ *cobra.Command, _ []string) {
+		jobURL, err := buildJobDetailURL()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		data, err := scraper.FetchJobDetail(jobURL)
+		if err != nil {
+			handleError(err)
+			return
+		}
+		output.Render(data, outputFlag)
+	},
+}
+
 // --- job apply ---
 
 var (
@@ -126,9 +172,11 @@ var jobApplyCmd = &cobra.Command{
 
 func init() {
 	jobCmd.AddCommand(jobSearchCmd)
+	jobCmd.AddCommand(jobDetailCmd)
 	jobCmd.AddCommand(jobApplyCmd)
 
 	addCommonFlags(jobSearchCmd)
+	addCommonFlags(jobDetailCmd)
 	addCommonFlags(jobApplyCmd)
 
 	// search flags
@@ -142,6 +190,10 @@ func init() {
 	jobSearchCmd.Flags().StringVar(&searchJobName, "job-name", "", "Job keyword")
 	jobSearchCmd.Flags().StringVar(&searchCompanyName, "company-name", "", "Company name")
 	jobSearchCmd.Flags().StringVar(&searchPage, "page", "", "Result page number (first page is usually 0)")
+
+	// detail flags
+	jobDetailCmd.Flags().StringVar(&detailJobID, "job-id", "", "Job ID (for type 1 headhunter jobs)")
+	jobDetailCmd.Flags().StringVar(&detailJobURL, "job-detail-url", "", "Full job detail URL from search results (overrides --job-id)")
 
 	// apply flags
 	jobApplyCmd.Flags().StringVar(&applyJobID, "job-id", "", "Job ID (required)")
