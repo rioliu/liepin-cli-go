@@ -113,7 +113,7 @@ const multiBlockPageHTML = `<!DOCTYPE html>
 
 var _ = Describe("FetchJobDetail", func() {
 	It("extracts full detail from type 1 job page", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(type1PageHTML))
 		}))
@@ -134,7 +134,7 @@ var _ = Describe("FetchJobDetail", func() {
 	})
 
 	It("extracts full detail from type 2 job page", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(type2PageHTML))
 		}))
@@ -149,7 +149,7 @@ var _ = Describe("FetchJobDetail", func() {
 	})
 
 	It("returns error for page not found", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte(pageNotFoundHTML))
 		}))
 		DeferCleanup(srv.Close)
@@ -160,7 +160,7 @@ var _ = Describe("FetchJobDetail", func() {
 	})
 
 	It("returns error when no JSON-LD present", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte(noLDPageHTML))
 		}))
 		DeferCleanup(srv.Close)
@@ -171,7 +171,7 @@ var _ = Describe("FetchJobDetail", func() {
 	})
 
 	It("returns error for HTTP failures", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		DeferCleanup(srv.Close)
@@ -182,7 +182,7 @@ var _ = Describe("FetchJobDetail", func() {
 	})
 
 	It("skips non-JobPosting JSON-LD blocks", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(multiBlockPageHTML))
 		}))
