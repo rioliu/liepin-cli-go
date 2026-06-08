@@ -7,7 +7,8 @@ Search for jobs, AI-match against my resume, and apply. Works in two modes:
 
 $ARGUMENTS
 
-- Keywords: "Go Kubernetes", "Python AI platform", "DevOps SRE"
+- Single keyword: `测试架构师`
+- Multiple keywords (pipe-separated): `测试架构师|QA架构师|测试开发` — runs separate searches, merges results
 - URL: `https://www.liepin.com/a/12345.shtml`
 - Job ID: `12345`
 
@@ -32,13 +33,17 @@ These become the search filters. Do not hardcode them.
 
 ### 3. Search mode — fetch jobs
 
-Run search using the extracted preferences:
+Split input by `|` into a list of keyword phrases. If no `|` is present, treat the entire input as a single keyword phrase.
+
+For **each** keyword phrase, run a search in parallel using the extracted preferences:
 
 ```
-bin/liepin-cli job search --job-name "<keywords>" --salary-floor <from-resume> --address <from-resume> --work-experience <from-resume> -o json
+bin/liepin-cli job search --job-name "<keyword>" --salary-floor <from-resume> --address <from-resume> --work-experience <from-resume> -o json
 ```
 
-Extract the job list. For each job (up to 10), fetch full JD:
+After all searches complete, **merge** the job lists and **deduplicate by jobId** (same jobId from different searches → keep one).
+
+For each unique job (up to 10), fetch full JD:
 
 ```
 bin/liepin-cli job detail --job-detail-url "<jobDetailUrl>" -o json
@@ -105,6 +110,7 @@ Report results:
 
 ## Notes
 
-- If search returns no results, suggest alternative keywords
-- If fewer than 3 jobs score 70+, suggest broadening the search
-- Deduplicate by jobId if the same job appears in multiple searches
+- For multiple keywords, run searches **in parallel** for speed
+- Deduplicate by jobId — same job found under different keywords is listed once
+- If a keyword returns no results, note it and continue with other keywords
+- If fewer than 3 jobs score 70+, suggest broadening the search with more keywords
