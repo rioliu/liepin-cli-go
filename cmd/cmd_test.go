@@ -275,7 +275,7 @@ var _ = Describe("Job detail", func() {
 	})
 
 	It("fetches and renders job detail from URL", func() {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(`<!DOCTYPE html>
 <html><head><title>Test</title>
