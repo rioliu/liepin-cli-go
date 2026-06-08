@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 make build              # go build -o bin/liepin-cli
-make test               # go test ./... (unit tests, 103 Ginkgo specs)
+make test               # go test ./... (unit tests, 135 Ginkgo specs)
 make test-e2e           # e2e tests (requires LIEPIN_USER_TOKEN)
 make test-e2e-verbose   # e2e tests with verbose output
 make clean              # remove bin/
@@ -41,6 +41,10 @@ Each API input is a struct with a `Validate() error` method. `ParseOptionalInt` 
 ### Error handling
 
 `handleError` type-switches on custom error types: `client.AuthorizationError` → "refresh your token", `config.MissingTokenError` → "run setup", `client.RequestError` → exit code 1, others → exit code 2.
+
+### Scraper (`internal/scraper/`)
+
+Fetches job detail pages from liepin.com and extracts schema.org `JobPosting` JSON-LD data. Used by `job detail` command. `FetchJobDetail(url)` returns `*JobDetail` with title, full JD description, experience/education requirements, location, company, etc. Handles two JSON-LD blocks per page (Baidu SEO + JobPosting) by scanning for the one containing `"JobPosting"`. Falls back to regex extraction if JSON parsing fails due to malformed content.
 
 ## Test Conventions
 
