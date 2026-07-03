@@ -34,7 +34,18 @@ func buildClient() (*client.Client, *config.RuntimeConfig, error) {
 }
 
 func exitWithError(err error, isRequestError bool) {
-	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if outputFlag == "json" {
+		errMap := map[string]any{
+			"errCode": -1,
+			"errMsg":  err.Error(),
+		}
+		if _, ok := err.(*client.RateLimitError); ok {
+			errMap["rateLimited"] = true
+		}
+		output.Render(errMap, "json")
+	} else {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	}
 	code := 2
 	if isRequestError {
 		code = 1
@@ -50,16 +61,27 @@ func handleError(err error) {
 	case *client.RequestError:
 		exitWithError(e, true)
 	case *client.AuthorizationError:
-		fmt.Fprintln(os.Stderr, "Authorization failed. Please run liepin-cli setup or liepin-cli auth setup to refresh your token.")
+		if outputFlag != "json" {
+			fmt.Fprintln(os.Stderr, "Authorization failed. Please run liepin-cli setup or liepin-cli auth setup to refresh your token.")
+		}
 		exitWithError(e, true)
 	case *config.MissingTokenError:
-		fmt.Fprintln(os.Stderr, "No token found. Please run the setup flow first.")
+		if outputFlag != "json" {
+			fmt.Fprintln(os.Stderr, "No token found. Please run the setup flow first.")
+		}
 		exitWithError(e, false)
 	case *config.InvalidInputError:
 		exitWithError(e, false)
 	case *client.TLSError:
-		fmt.Fprintln(os.Stderr, "TLS verification failed. This can happen when an HTTP proxy intercepts traffic.\n  Rerun with --insecure (-k) to skip certificate verification.")
+		if outputFlag != "json" {
+			fmt.Fprintln(os.Stderr, "TLS verification failed. This can happen when an HTTP proxy intercepts traffic.\n  Rerun with --insecure (-k) to skip certificate verification.")
+		}
 		exitWithError(e, false)
+	case *client.RateLimitError:
+		if outputFlag != "json" {
+			fmt.Fprintf(os.Stderr, "Rate limited. Please retry after %s.\n", e.RetryAfter)
+		}
+		exitWithError(e, true)
 	default:
 		exitWithError(e, false)
 	}
