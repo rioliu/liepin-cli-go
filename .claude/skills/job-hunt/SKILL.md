@@ -150,46 +150,28 @@ Report results:
 - Fetch JD details in parallel (up to 10 concurrent fetches)
 - Always read the full JD before scoring — title alone is not reliable
 
-## Rate Limit & Bulk Apply Rules
+## Bulk Apply Rules
 
-Two distinct limits can block applications:
+Liepin enforces a **daily application limit** (~50-80 per day). The server returns HTTP 200 with `"您的投递已达上限"` in the response body when the cap is hit. HTTP 429 rate limiting is handled by the CLI automatically.
 
-| Limit | HTTP Status | Detection | Behavior |
-|-------|-------------|-----------|----------|
-| **App daily cap** | 200 | Body: `"已达上限"` | Quit immediately — no retry, wait until tomorrow |
-| **HTTP rate limit** | 429 | `rateLimited: true` in error JSON | Wait `RetryAfter` seconds, then retry |
+### Response handling:
 
-### Processing sequence (per apply attempt):
-
-```
-1. Call apply API
-2. Parse response
-3. IF body contains "已达上限" → STOP (daily cap reached, cannot continue)
-4. IF error has rateLimited=true → WAIT RetryAfter seconds → RETRY
-5. IF "已投递过" → SKIP (already applied)
-6. IF "应聘成功" → CONTINUE
-7. Other error → RETRY once after 2s, then SKIP
-```
-
-### When applying to multiple jobs:
-
-1. **Always add a delay** between apply requests: `sleep 0.5` between each call to avoid triggering HTTP 429
-2. **Check app limit first**: if response contains `"已达上限"`, **stop immediately** — further attempts will also fail
-3. **Then check rate limit**: if 429, wait for `RetryAfter` duration before retrying
-4. **Report the cap**: tell the user how many succeeded before hitting the limit, and how many remain
-
-### Bulk apply strategy:
-
-- **Score first, then apply**: when there are many candidates, score and rank before applying to use the daily quota on the best matches
-- **Prioritize 70+ scored jobs**: apply to highest-scoring jobs first, lower-scoring ones can wait for the next day
-- **Batch across days**: if the user wants to apply to all results, schedule retries for the next day(s) using `CronCreate` with `recurring: false`
-
-### Error messages from server:
-
-| Response | Meaning | Action |
-|----------|---------|--------|
+| Response body contains | Meaning | Action |
+|------------------------|---------|--------|
 | `应聘成功` | Applied successfully | Continue |
 | `您已投递过该职位` | Already applied | Skip, continue |
 | `您的投递已达上限` | Daily app limit reached | **Stop immediately** — no retry |
-| HTTP 429 + `rateLimited: true` | Too many requests | Wait `RetryAfter` (default 5s), then retry |
-| Other / empty response | Transient error | Retry once after 2s, then skip |
+| `rateLimited: true` (error JSON) | HTTP 429 — handled by CLI | Already retried automatically |
+| Other error | Transient failure | Skip, continue |
+
+### When applying to multiple jobs:
+
+1. **Add a delay** between requests: `sleep 0.5` to avoid triggering HTTP 429
+2. **Check for "已达上限"**: if found, **stop immediately** — further attempts will also fail
+3. **Report the cap**: tell the user how many succeeded and how many remain
+
+### Bulk apply strategy:
+
+- **Score first, then apply**: use the daily quota on the best matches
+- **Prioritize 70+ scored jobs**: apply to highest-scoring jobs first
+- **Batch across days**: schedule retries for the next day(s) using `CronCreate` with `recurring: false`
