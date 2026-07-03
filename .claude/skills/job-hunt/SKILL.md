@@ -32,7 +32,6 @@ Run `bin/liepin-cli resume get -o json` to get the full resume.
 Extract **search filters**:
 - **Location**: from 求职期望 → 期望地点 (e.g. 北京)
 - **Salary floor**: from 求职期望 → 期望薪资下限 (e.g. 30000)
-- **Work years**: from 开始工作年份 → calculate years of experience
 
 Extract **resume abilities** as a structured list for matching. Group by category:
 - **Languages**: e.g. Python (primary), Go, Java, Shell
@@ -56,7 +55,7 @@ Split input by `|` into a list of keyword phrases. If no `|` is present, treat t
 For **each** keyword phrase, run a search in parallel:
 
 ```
-bin/liepin-cli job search --job-name "<keyword>" --salary-floor <from-resume> --address <from-resume> --work-experience <from-resume> -o json
+bin/liepin-cli job search --job-name "<keyword>" --salary-floor <from-resume> --address <from-resume> -o json
 ```
 
 After all searches complete, **merge** the job lists and **deduplicate by jobId** (same jobId from different searches → keep one).
@@ -75,10 +74,9 @@ Read `references/scoring-rubric.md` for the full scoring methodology.
 
 For each fetched JD, score against the resume abilities from Step 1:
 
-1. **Skills match** (40%): Compare JD required skills against the structured ability list. Match by actual skill content, not job title.
-2. **Experience fit** (25%): Years and seniority alignment. Overqualified is a gap.
-3. **Industry/domain** (20%): Relevance of candidate's background. Hard domain requirements are critical gaps.
-4. **Education** (15%): Meets degree/major requirements?
+1. **Skills match** (50%): Compare JD required skills against the structured ability list. Match by actual skill content, not job title.
+2. **Industry/domain** (30%): Relevance of candidate's background. Hard domain requirements are critical gaps.
+3. **Education** (20%): Meets degree/major requirements?
 
 **Critical gap rules** — these cap the score:
 - Hard domain requirement the candidate lacks → cap at 65
