@@ -2,8 +2,10 @@ package client_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -116,6 +118,66 @@ var _ = Describe("Client GET", func() {
 		c := client.New(client.Config{Token: "t", BaseURL: "http://127.0.0.1:0", Timeout: 0})
 		_, err := c.Get("/x")
 		Expect(err).To(HaveOccurred())
+	})
+
+	It("returns RateLimitError for 429 with Retry-After header", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Retry-After", "30")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"msg":"too many requests"}`))
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		_, err := c.Get("/any")
+		Expect(err).To(BeAssignableToTypeOf(&client.RateLimitError{}))
+		rlErr := err.(*client.RateLimitError)
+		Expect(rlErr.StatusCode).To(Equal(429))
+		Expect(rlErr.RetryAfter).To(Equal(30 * time.Second))
+		Expect(rlErr.Body).To(ContainSubstring("too many requests"))
+	})
+
+	It("returns RateLimitError for 429 with X-RateLimit-Reset header", func() {
+		resetTime := time.Now().Add(60 * time.Second).Unix()
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", resetTime))
+			w.WriteHeader(http.StatusTooManyRequests)
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		_, err := c.Get("/any")
+		Expect(err).To(BeAssignableToTypeOf(&client.RateLimitError{}))
+		rlErr := err.(*client.RateLimitError)
+		Expect(rlErr.RetryAfter).To(BeNumerically(">=", 59*time.Second))
+		Expect(rlErr.RetryAfter).To(BeNumerically("<=", 61*time.Second))
+	})
+
+	It("returns RateLimitError for 429 without headers uses default fallback", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusTooManyRequests)
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		_, err := c.Get("/any")
+		Expect(err).To(BeAssignableToTypeOf(&client.RateLimitError{}))
+		rlErr := err.(*client.RateLimitError)
+		Expect(rlErr.RetryAfter).To(Equal(client.DefaultRateLimitWait))
+	})
+
+	It("returns RateLimitError for 429 with negative Retry-After uses fallback", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Retry-After", "-5")
+			w.WriteHeader(http.StatusTooManyRequests)
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		_, err := c.Get("/any")
+		Expect(err).To(BeAssignableToTypeOf(&client.RateLimitError{}))
+		rlErr := err.(*client.RateLimitError)
+		Expect(rlErr.RetryAfter).To(Equal(client.DefaultRateLimitWait))
 	})
 })
 
