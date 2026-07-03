@@ -149,3 +149,28 @@ Report results:
 - If a keyword returns no results, note it and continue with other keywords
 - Fetch JD details in parallel (up to 10 concurrent fetches)
 - Always read the full JD before scoring — title alone is not reliable
+
+## Bulk Apply Rules
+
+Liepin enforces a **daily application limit** (~50-80 per day). The server returns HTTP 200 with `"您的投递已达上限"` in the response body when the cap is hit. HTTP 429 rate limiting is handled by the CLI automatically.
+
+### Response handling:
+
+| Response body contains | Meaning | Action |
+|------------------------|---------|--------|
+| `应聘成功` | Applied successfully | Continue |
+| `您已投递过该职位` | Already applied | Skip, continue |
+| `您的投递已达上限` | Daily app limit reached | **Stop immediately** — no retry |
+| `rateLimited: true` (error JSON) | HTTP 429 — handled by CLI | Already retried automatically |
+| Other error | Transient failure | Skip, continue |
+
+### When applying to multiple jobs:
+
+1. **Add a delay** between requests: `sleep 0.5` to avoid triggering HTTP 429
+2. **Check for "已达上限"**: if found, **stop immediately** — further attempts will also fail
+3. **Report the cap**: tell the user how many succeeded and how many remain
+
+### Bulk apply strategy:
+
+- **Score first, then apply**: use the daily quota on the best matches
+- **Prioritize 70+ scored jobs**: apply to highest-scoring jobs first
