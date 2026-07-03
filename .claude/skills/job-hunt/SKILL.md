@@ -174,4 +174,3 @@ Liepin enforces a **daily application limit** (~50-80 per day). The server retur
 
 - **Score first, then apply**: use the daily quota on the best matches
 - **Prioritize 70+ scored jobs**: apply to highest-scoring jobs first
-- **Batch across days**: schedule retries for the next day(s) using `CronCreate` with `recurring: false`
