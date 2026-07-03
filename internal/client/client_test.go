@@ -179,6 +179,55 @@ var _ = Describe("Client GET", func() {
 		rlErr := err.(*client.RateLimitError)
 		Expect(rlErr.RetryAfter).To(Equal(client.DefaultRateLimitWait))
 	})
+
+	It("returns RateLimitError for HTTP 200 with app-level rate limit code", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":429001,"msg":"请求过于频繁，请稍后再试"}`))
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		_, err := c.Get("/any")
+		Expect(err).To(BeAssignableToTypeOf(&client.RateLimitError{}))
+		rlErr := err.(*client.RateLimitError)
+		Expect(rlErr.StatusCode).To(Equal(200))
+		Expect(rlErr.RetryAfter).To(Equal(client.DefaultRateLimitWait))
+		Expect(rlErr.Body).To(ContainSubstring("429001"))
+	})
+
+	It("parses Retry-After header from HTTP 200 app rate limit response", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
+			w.Header().Set("Retry-After", "10")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":429001,"msg":"请求过于频繁，请稍后再试"}`))
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		_, err := c.Get("/any")
+		Expect(err).To(BeAssignableToTypeOf(&client.RateLimitError{}))
+		rlErr := err.(*client.RateLimitError)
+		Expect(rlErr.StatusCode).To(Equal(200))
+		Expect(rlErr.RetryAfter).To(Equal(10 * time.Second))
+	})
+
+	It("does not treat HTTP 200 with non-rate-limit code as error", func() {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set(client.HeaderContentType, client.MediaTypeJSON)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":0,"data":{}}`))
+		}))
+		defer srv.Close()
+
+		c := newClient(srv)
+		result, err := c.Get("/any")
+		Expect(err).NotTo(HaveOccurred())
+		m := result.(map[string]any)
+		Expect(m["code"]).To(BeNumerically("==", 0))
+	})
 })
 
 var _ = Describe("Client POST", func() {
