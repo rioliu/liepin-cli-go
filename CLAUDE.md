@@ -46,6 +46,13 @@ Each API input is a struct with a `Validate() error` method. `ParseOptionalInt` 
 
 Fetches job detail pages from liepin.com and extracts schema.org `JobPosting` JSON-LD data. Used by `job detail` command. `FetchJobDetail(url)` returns `*JobDetail` with title, full JD description, experience/education requirements, location, company, etc. Handles two JSON-LD blocks per page (Baidu SEO + JobPosting) by scanning for the one containing `"JobPosting"`. Falls back to regex extraction if JSON parsing fails due to malformed content.
 
+## Git Workflow
+
+- **Never push directly to main** — always create a feature branch and PR
+- Branch naming: `<type>/<short-description>` (e.g. `refactor/job-hunt-scoring`, `feat/new-command`)
+- Use `gh pr create` to open PRs with a clear title and body explaining the change
+- Switch back to main after creating the PR: `git checkout main`
+
 ## Test Conventions
 
 - **Unit tests**: `*_test.go` alongside source using Ginkgo v2 + Gomega. Mock HTTP server in `cmd/cmd_test.go` tests full CLI flows via `rootCmd.SetArgs()` + `rootCmd.Execute()`.
