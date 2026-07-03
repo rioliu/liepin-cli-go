@@ -33,7 +33,7 @@ on:
 # Match ci.yml's concurrency so a quick succession of doc-then-code or
 # code-then-doc pushes on the same PR don't pile up.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:

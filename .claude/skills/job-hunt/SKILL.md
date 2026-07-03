@@ -161,7 +161,7 @@ Liepin enforces a **daily application limit** (~50-80 per day). The server retur
 | `应聘成功` | Applied successfully | Continue |
 | `您已投递过该职位` | Already applied | Skip, continue |
 | `您的投递已达上限` | Daily app limit reached | **Stop immediately** — no retry |
-| `rateLimited: true` (error JSON) | HTTP 429 — handled by CLI | Already retried automatically |
+| `rateLimited: true` (error JSON) | HTTP 429 or app rate limit (code 429xxx) — handled by CLI | Already retried automatically |
 | Other error | Transient failure | Skip, continue |
 
 ### When applying to multiple jobs:

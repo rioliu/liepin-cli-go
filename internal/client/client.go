@@ -193,16 +193,8 @@ func (c *Client) doRequest(req *http.Request) (any, error) {
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, &AuthorizationError{StatusCode: resp.StatusCode, Body: bodyStr}
 	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		retryAfter := parseRetryAfter(resp.Header)
-		if retryAfter == 0 {
-			retryAfter = DefaultRateLimitWait
-		}
-		return nil, &RateLimitError{
-			StatusCode: resp.StatusCode,
-			Body:       bodyStr,
-			RetryAfter: retryAfter,
-		}
+	if isRateLimit(resp.StatusCode, bodyBytes) {
+		return nil, newRateLimitError(resp.StatusCode, bodyStr, resp.Header)
 	}
 	if resp.StatusCode >= 400 {
 		return nil, &RequestError{StatusCode: resp.StatusCode, Body: bodyStr}
@@ -260,6 +252,34 @@ func parseRetryAfter(h http.Header) time.Duration {
 		}
 	}
 	return 0
+}
+
+func newRateLimitError(statusCode int, body string, headers http.Header) *RateLimitError {
+	retryAfter := parseRetryAfter(headers)
+	if retryAfter == 0 {
+		retryAfter = DefaultRateLimitWait
+	}
+	return &RateLimitError{
+		StatusCode: statusCode,
+		Body:       body,
+		RetryAfter: retryAfter,
+	}
+}
+
+// isRateLimit detects both HTTP-level and application-level rate limits:
+//   - HTTP 429 status code
+//   - HTTP 200 with code 429001 in the JSON body
+func isRateLimit(statusCode int, body []byte) bool {
+	if statusCode == http.StatusTooManyRequests {
+		return true
+	}
+	var envelope struct {
+		Code int `json:"code"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return false
+	}
+	return envelope.Code == 429001
 }
 
 func isTLSError(err error) bool {
