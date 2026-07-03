@@ -38,6 +38,10 @@ const (
 	MediaTypeJSON     = "application/json"
 )
 
+// DefaultRateLimitWait is the fallback duration to wait before retrying when
+// the server returns 429 but no Retry-After or X-RateLimit-Reset header.
+const DefaultRateLimitWait = 5 * time.Second
+
 // TLSError wraps a transport-layer TLS or x509 failure so callers can
 // distinguish certificate issues from generic request errors and surface a
 // helpful hint (such as the --insecure flag).
@@ -95,6 +99,27 @@ func (e *AuthorizationError) Error() string {
 	parts := []string{fmt.Sprintf("%d", e.StatusCode)}
 	if e.Body != "" {
 		parts = append(parts, e.Body)
+	}
+	return strings.Join(parts, " ")
+}
+
+// RateLimitError is returned when the API responds with 429 Too Many
+// Requests. RetryAfter is parsed from the Retry-After header (seconds) or
+// X-RateLimit-Reset header (Unix timestamp). Callers should sleep for the
+// indicated duration before retrying.
+type RateLimitError struct {
+	StatusCode int
+	Body       string
+	RetryAfter time.Duration
+}
+
+func (e *RateLimitError) Error() string {
+	parts := []string{fmt.Sprintf("%d", e.StatusCode)}
+	if e.Body != "" {
+		parts = append(parts, e.Body)
+	}
+	if e.RetryAfter > 0 {
+		parts = append(parts, fmt.Sprintf("retry after %s", e.RetryAfter))
 	}
 	return strings.Join(parts, " ")
 }
@@ -168,6 +193,17 @@ func (c *Client) doRequest(req *http.Request) (any, error) {
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, &AuthorizationError{StatusCode: resp.StatusCode, Body: bodyStr}
 	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter := parseRetryAfter(resp.Header)
+		if retryAfter == 0 {
+			retryAfter = DefaultRateLimitWait
+		}
+		return nil, &RateLimitError{
+			StatusCode: resp.StatusCode,
+			Body:       bodyStr,
+			RetryAfter: retryAfter,
+		}
+	}
 	if resp.StatusCode >= 400 {
 		return nil, &RequestError{StatusCode: resp.StatusCode, Body: bodyStr}
 	}
@@ -185,6 +221,45 @@ func (c *Client) doRequest(req *http.Request) (any, error) {
 		return nil, nil
 	}
 	return bodyStr, nil
+}
+
+// parseRetryAfter extracts the wait duration from rate-limit response headers.
+// It checks, in order:
+//  1. Retry-After header (seconds as integer, or HTTP-date)
+//  2. X-RateLimit-Reset header (Unix timestamp in seconds)
+//
+// Returns 0 if no valid header is found.
+func parseRetryAfter(h http.Header) time.Duration {
+	// Standard Retry-After: seconds or HTTP-date
+	if ra := h.Get("Retry-After"); ra != "" {
+		if secs, err := time.ParseDuration(ra + "s"); err == nil && secs > 0 {
+			return secs
+		}
+		if t, err := time.Parse(time.RFC1123, ra); err == nil {
+			d := time.Until(t)
+			if d > 0 {
+				return d
+			}
+		}
+	}
+	// X-RateLimit-Reset: Unix timestamp
+	if reset := h.Get("X-RateLimit-Reset"); reset != "" {
+		if ts, err := time.Parse(time.UnixDate, reset); err == nil {
+			d := time.Until(ts)
+			if d > 0 {
+				return d
+			}
+		}
+		// Try as Unix timestamp (seconds since epoch)
+		var unixSec int64
+		if _, err := fmt.Sscanf(reset, "%d", &unixSec); err == nil && unixSec > 0 {
+			d := time.Until(time.Unix(unixSec, 0))
+			if d > 0 {
+				return d
+			}
+		}
+	}
+	return 0
 }
 
 func isTLSError(err error) bool {
