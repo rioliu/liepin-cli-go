@@ -136,11 +136,4 @@ The skill will:
 3. Score and rank results against your abilities
 4. Optionally apply to jobs scoring 70+
 
-### Install in other projects
-
-To use the skill in a different project:
-
-```bash
-cp -r .claude/skills/job-hunt /path/to/other-project/.claude/skills/
-```
 
