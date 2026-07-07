@@ -117,17 +117,30 @@ make test-e2e
 
 ## Claude Code Integration
 
-To teach Claude how to use `liepin-cli`, install the official skill from the upstream repo:
+This repo ships with a Claude Code skill for job hunting. Usage:
 
 ```bash
-npx skills add liepin-tech-2026/liepin-cli -y -g
+cd liepin-cli-go
+claude
 ```
 
-If you don't have Node.js, clone the repo and use `uv`:
+Then in Claude Code:
+
+```
+/job-hunt 测试架构师|QA Lead
+```
+
+The skill will:
+1. Fetch your resume and extract search preferences
+2. Search Liepin with your keywords (in parallel)
+3. Score and rank results against your abilities
+4. Optionally apply to jobs scoring 70+
+
+### Install in other projects
+
+To use the skill in a different project:
 
 ```bash
-git clone https://github.com/liepin-tech-2026/liepin-cli.git /tmp/liepin-cli
-cd /tmp/liepin-cli
-uv run liepin-cli skill install --claude
+cp -r .claude/skills/job-hunt /path/to/other-project/.claude/skills/
 ```
 
