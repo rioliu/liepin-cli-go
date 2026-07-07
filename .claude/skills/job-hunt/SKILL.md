@@ -42,6 +42,21 @@ Extract **resume abilities** as a structured list for matching. Group by categor
 
 These become the matching basis. Do not hardcode them.
 
+Determine **internet company filter** — internet companies (互联网) have implicit age restrictions. Apply this rule:
+
+1. **Calculate age** from 生日 field (e.g. 19810301 → ~45 in 2026)
+2. **Check industry background** from 当前行业 and work history industries
+
+| Age | Industry Background | Filter |
+|-----|-------------------|--------|
+| < 40 | Any | **Include** internet companies |
+| ≥ 40 | 互联网 career | **Include** internet companies (familiar territory) |
+| ≥ 40 | Non-互联网 career (计算机软件, IT服务, 云计算, 企业软件, etc.) | **Exclude** internet companies |
+
+Reason: internet companies favor younger candidates; non-internet candidates over 40 face significant bias there and have better odds at enterprise/foreign companies.
+
+Note the age, industry classification, and filter decision in the results header.
+
 ### 2. Determine mode
 
 - If input starts with `http` → **single mode**: fetch one job detail, skip to step 4
@@ -60,7 +75,11 @@ bin/liepin-cli job search --job-name "<keyword>" --salary-floor <from-resume> --
 
 After all searches complete, **merge** the job lists and **deduplicate by jobId** (same jobId from different searches → keep one).
 
-**Fetch JD details** for all unique jobs. Run fetches in parallel (up to 10 concurrently):
+**Apply industry filter** (from Step 1):
+- If the candidate is NOT from the internet industry → remove jobs where `industry` contains "互联网"
+- Log how many jobs were filtered and why
+
+**Fetch JD details** for remaining unique jobs. Run fetches in parallel (up to 10 concurrently):
 
 ```
 bin/liepin-cli job detail --job-detail-url "<jobDetailUrl>" -o json
